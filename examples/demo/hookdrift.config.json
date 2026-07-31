@@ -1,0 +1,15 @@
+{
+  "contractsDir": ".hookdrift",
+  "providers": {
+    "stripe": {
+      "fixtures": "{fixtures,fixtures-drifted}/stripe/**/*.json",
+      "eventPath": "type"
+    },
+    "github": {
+      "fixtures": "{fixtures,fixtures-drifted}/github/**/*.json",
+      "eventPath": "@dirname"
+    }
+  },
+  "source": [],
+  "strict": false
+}

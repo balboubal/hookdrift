@@ -1,0 +1,407 @@
+{
+  "version": 1,
+  "provider": "stripe",
+  "event": "charge.succeeded",
+  "samplesObserved": 36,
+  "firstSeen": "2026-07-31T03:28:55.452Z",
+  "lastUpdated": "2026-07-31T03:28:55.452Z",
+  "fields": {
+    "api_version": {
+      "types": [
+        "string"
+      ],
+      "presence": 1,
+      "format": "iso8601",
+      "enum": [
+        "2026-06-30"
+      ],
+      "enumConfidence": 0.9722
+    },
+    "created": {
+      "types": [
+        "number"
+      ],
+      "presence": 1,
+      "format": "unix_seconds",
+      "intOnly": true
+    },
+    "data": {
+      "types": [
+        "object"
+      ],
+      "presence": 1
+    },
+    "data.object": {
+      "types": [
+        "object"
+      ],
+      "presence": 1
+    },
+    "data.object.amount": {
+      "types": [
+        "number"
+      ],
+      "presence": 1,
+      "intOnly": true
+    },
+    "data.object.amount_captured": {
+      "types": [
+        "number"
+      ],
+      "presence": 1,
+      "intOnly": true
+    },
+    "data.object.amount_refunded": {
+      "types": [
+        "number"
+      ],
+      "presence": 1,
+      "intOnly": true
+    },
+    "data.object.balance_transaction": {
+      "types": [
+        "string"
+      ],
+      "presence": 1
+    },
+    "data.object.billing_details": {
+      "types": [
+        "object"
+      ],
+      "presence": 1
+    },
+    "data.object.billing_details.address": {
+      "types": [
+        "object"
+      ],
+      "presence": 1
+    },
+    "data.object.billing_details.address.city": {
+      "types": [
+        "string"
+      ],
+      "presence": 1,
+      "enum": [
+        "Berlin",
+        "London",
+        "Paris"
+      ],
+      "enumConfidence": 0.9167
+    },
+    "data.object.billing_details.address.country": {
+      "types": [
+        "string"
+      ],
+      "presence": 1,
+      "enum": [
+        "DE",
+        "FR",
+        "GB"
+      ],
+      "enumConfidence": 0.9167
+    },
+    "data.object.billing_details.email": {
+      "types": [
+        "string"
+      ],
+      "presence": 1,
+      "format": "email"
+    },
+    "data.object.billing_details.name": {
+      "types": [
+        "string"
+      ],
+      "presence": 1
+    },
+    "data.object.captured": {
+      "types": [
+        "boolean"
+      ],
+      "presence": 1
+    },
+    "data.object.created": {
+      "types": [
+        "number"
+      ],
+      "presence": 1,
+      "format": "unix_seconds",
+      "intOnly": true
+    },
+    "data.object.currency": {
+      "types": [
+        "string"
+      ],
+      "presence": 1,
+      "enum": [
+        "eur",
+        "gbp",
+        "usd"
+      ],
+      "enumConfidence": 0.9167
+    },
+    "data.object.customer": {
+      "types": [
+        "string"
+      ],
+      "presence": 1
+    },
+    "data.object.description": {
+      "types": [
+        "string"
+      ],
+      "presence": 1,
+      "nullable": true
+    },
+    "data.object.disputed": {
+      "types": [
+        "boolean"
+      ],
+      "presence": 1
+    },
+    "data.object.failure_code": {
+      "types": [],
+      "presence": 1,
+      "nullable": true
+    },
+    "data.object.failure_message": {
+      "types": [],
+      "presence": 1,
+      "nullable": true
+    },
+    "data.object.id": {
+      "types": [
+        "string"
+      ],
+      "presence": 1
+    },
+    "data.object.livemode": {
+      "types": [
+        "boolean"
+      ],
+      "presence": 1
+    },
+    "data.object.metadata": {
+      "types": [
+        "object"
+      ],
+      "presence": 1
+    },
+    "data.object.object": {
+      "types": [
+        "string"
+      ],
+      "presence": 1,
+      "enum": [
+        "charge"
+      ],
+      "enumConfidence": 0.9722
+    },
+    "data.object.outcome": {
+      "types": [
+        "object"
+      ],
+      "presence": 1
+    },
+    "data.object.outcome.network_status": {
+      "types": [
+        "string"
+      ],
+      "presence": 1,
+      "enum": [
+        "approved_by_network"
+      ],
+      "enumConfidence": 0.9722
+    },
+    "data.object.outcome.reason": {
+      "types": [],
+      "presence": 1,
+      "nullable": true
+    },
+    "data.object.outcome.risk_level": {
+      "types": [
+        "string"
+      ],
+      "presence": 1,
+      "enum": [
+        "normal"
+      ],
+      "enumConfidence": 0.9722
+    },
+    "data.object.outcome.seller_message": {
+      "types": [
+        "string"
+      ],
+      "presence": 1,
+      "enum": [
+        "Payment complete."
+      ],
+      "enumConfidence": 0.9722
+    },
+    "data.object.outcome.type": {
+      "types": [
+        "string"
+      ],
+      "presence": 1,
+      "enum": [
+        "authorized"
+      ],
+      "enumConfidence": 0.9722
+    },
+    "data.object.paid": {
+      "types": [
+        "boolean"
+      ],
+      "presence": 1
+    },
+    "data.object.payment_intent": {
+      "types": [
+        "string"
+      ],
+      "presence": 1
+    },
+    "data.object.payment_method": {
+      "types": [
+        "string"
+      ],
+      "presence": 1
+    },
+    "data.object.payment_method_details": {
+      "types": [
+        "object"
+      ],
+      "presence": 1
+    },
+    "data.object.payment_method_details.card": {
+      "types": [
+        "object"
+      ],
+      "presence": 1
+    },
+    "data.object.payment_method_details.card.brand": {
+      "types": [
+        "string"
+      ],
+      "presence": 1,
+      "enum": [
+        "amex",
+        "mastercard",
+        "visa"
+      ],
+      "enumConfidence": 0.9167
+    },
+    "data.object.payment_method_details.card.country": {
+      "types": [
+        "string"
+      ],
+      "presence": 1,
+      "enum": [
+        "US"
+      ],
+      "enumConfidence": 0.9722
+    },
+    "data.object.payment_method_details.card.last4": {
+      "types": [
+        "string"
+      ],
+      "presence": 1,
+      "format": "numeric_string"
+    },
+    "data.object.payment_method_details.type": {
+      "types": [
+        "string"
+      ],
+      "presence": 1,
+      "enum": [
+        "card"
+      ],
+      "enumConfidence": 0.9722
+    },
+    "data.object.receipt_email": {
+      "types": [
+        "string"
+      ],
+      "presence": 1,
+      "nullable": true,
+      "format": "email"
+    },
+    "data.object.receipt_url": {
+      "types": [
+        "string"
+      ],
+      "presence": 1,
+      "format": "url"
+    },
+    "data.object.refunded": {
+      "types": [
+        "boolean"
+      ],
+      "presence": 1
+    },
+    "data.object.status": {
+      "types": [
+        "string"
+      ],
+      "presence": 1,
+      "enum": [
+        "succeeded"
+      ],
+      "enumConfidence": 0.9722
+    },
+    "id": {
+      "types": [
+        "string"
+      ],
+      "presence": 1
+    },
+    "livemode": {
+      "types": [
+        "boolean"
+      ],
+      "presence": 1
+    },
+    "object": {
+      "types": [
+        "string"
+      ],
+      "presence": 1,
+      "enum": [
+        "event"
+      ],
+      "enumConfidence": 0.9722
+    },
+    "pending_webhooks": {
+      "types": [
+        "number"
+      ],
+      "presence": 1,
+      "intOnly": true
+    },
+    "request": {
+      "types": [
+        "object"
+      ],
+      "presence": 1
+    },
+    "request.id": {
+      "types": [
+        "string"
+      ],
+      "presence": 1
+    },
+    "request.idempotency_key": {
+      "types": [],
+      "presence": 1,
+      "nullable": true
+    },
+    "type": {
+      "types": [
+        "string"
+      ],
+      "presence": 1,
+      "enum": [
+        "charge.succeeded"
+      ],
+      "enumConfidence": 0.9722
+    }
+  }
+}

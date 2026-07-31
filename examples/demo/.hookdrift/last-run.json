@@ -1,0 +1,88 @@
+{
+  "ranAt": "2026-07-31T03:29:02.441Z",
+  "strict": true,
+  "exitCode": 1,
+  "findings": [
+    {
+      "provider": "stripe",
+      "event": "charge.succeeded",
+      "path": "data.object.amount_refunded",
+      "severity": "BREAKING",
+      "kind": "path_moved",
+      "movedTo": "data.object.totals.amount_refunded",
+      "message": "moved to data.object.totals.amount_refunded (was at data.object.amount_refunded in 36/36 contract samples; new location seen in 10/10 new samples)"
+    },
+    {
+      "provider": "stripe",
+      "event": "charge.succeeded",
+      "path": "data.object.balance_transaction",
+      "severity": "BREAKING",
+      "kind": "path_removed",
+      "message": "removed (was present in 36/36 contract samples; absent from all 10 new samples)"
+    },
+    {
+      "provider": "stripe",
+      "event": "charge.succeeded",
+      "path": "data.object.currency",
+      "severity": "BREAKING",
+      "kind": "enum_value_removed",
+      "message": "enum value(s) no longer observed: [gbp] (enumConfidence 0.9167; 10 values in 10 new samples)"
+    },
+    {
+      "provider": "stripe",
+      "event": "charge.succeeded",
+      "path": "data.object.paid",
+      "severity": "BREAKING",
+      "kind": "became_nullable",
+      "message": "null observed (1 null value(s) in 10 new samples; never null in 36 contract samples)"
+    },
+    {
+      "provider": "stripe",
+      "event": "charge.succeeded",
+      "path": "data.object.amount_captured",
+      "severity": "WARNING",
+      "kind": "precision_shift",
+      "message": "numeric precision shift: contract observed integers only across 36 samples, floats appear in new samples"
+    },
+    {
+      "provider": "stripe",
+      "event": "charge.succeeded",
+      "path": "data.object.billing_details.email",
+      "severity": "WARNING",
+      "kind": "format_changed",
+      "message": "format changed: email → none (10 values in 10 new samples)"
+    },
+    {
+      "provider": "stripe",
+      "event": "charge.succeeded",
+      "path": "data.object.currency",
+      "severity": "WARNING",
+      "kind": "enum_value_added",
+      "message": "new enum value(s): [chf] — exhaustive switch/match statements over this field will miss them (10 values in 10 new samples)"
+    },
+    {
+      "provider": "stripe",
+      "event": "charge.succeeded",
+      "path": "pending_webhooks",
+      "severity": "WARNING",
+      "kind": "required_became_optional",
+      "message": "required → optional: present in 36/36 contract samples but only 8/10 new samples"
+    },
+    {
+      "provider": "stripe",
+      "event": "charge.succeeded",
+      "path": "data.object.calculated_statement_descriptor",
+      "severity": "INFO",
+      "kind": "new_field",
+      "message": "new field appeared in 10/10 new samples (not in contract of 36 samples)"
+    },
+    {
+      "provider": "stripe",
+      "event": "charge.succeeded",
+      "path": "data.object.totals",
+      "severity": "INFO",
+      "kind": "new_field",
+      "message": "new field appeared in 10/10 new samples (not in contract of 36 samples)"
+    }
+  ]
+}

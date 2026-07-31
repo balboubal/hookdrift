@@ -1,0 +1,42 @@
+{
+  "ref": "refs/heads/main",
+  "before": "246214e45bd904ce684fd2e2d94ad68c3e6583b7",
+  "after": "dca44bfb9ffc1cb1d88851733268d1739fc08178",
+  "created": false,
+  "deleted": false,
+  "forced": false,
+  "repository": {
+    "id": 987654321,
+    "name": "example-app",
+    "full_name": "example-org/example-app",
+    "private": true,
+    "owner": {
+      "name": "example-org",
+      "email": null
+    }
+  },
+  "pusher": {
+    "name": "dev-eloper",
+    "email": "dev@example.com"
+  },
+  "commits": [
+    {
+      "id": "9f126d6a8ba99fab7144c1a4344e6db0d2f58f6a",
+      "message": "commit 0 of push 3",
+      "timestamp": "2025-07-01T06:00:00.000Z",
+      "author": {
+        "name": "Dev Eloper",
+        "email": "dev@example.com"
+      }
+    }
+  ],
+  "head_commit": {
+    "id": "9f126d6a8ba99fab7144c1a4344e6db0d2f58f6a",
+    "message": "commit 0 of push 3",
+    "timestamp": "2025-07-01T06:00:00.000Z",
+    "author": {
+      "name": "Dev Eloper",
+      "email": "dev@example.com"
+    }
+  }
+}

@@ -1,0 +1,207 @@
+{
+  "version": 1,
+  "provider": "github",
+  "event": "push",
+  "samplesObserved": 5,
+  "firstSeen": "2026-07-31T03:28:55.456Z",
+  "lastUpdated": "2026-07-31T03:28:55.456Z",
+  "fields": {
+    "after": {
+      "types": [
+        "string"
+      ],
+      "presence": 1
+    },
+    "before": {
+      "types": [
+        "string"
+      ],
+      "presence": 1
+    },
+    "commits": {
+      "types": [
+        "array"
+      ],
+      "presence": 1
+    },
+    "commits[]": {
+      "types": [
+        "object"
+      ],
+      "presence": 1
+    },
+    "commits[].author": {
+      "types": [
+        "object"
+      ],
+      "presence": 1
+    },
+    "commits[].author.email": {
+      "types": [
+        "string"
+      ],
+      "presence": 1,
+      "format": "email"
+    },
+    "commits[].author.name": {
+      "types": [
+        "string"
+      ],
+      "presence": 1
+    },
+    "commits[].id": {
+      "types": [
+        "string"
+      ],
+      "presence": 1
+    },
+    "commits[].message": {
+      "types": [
+        "string"
+      ],
+      "presence": 1
+    },
+    "commits[].timestamp": {
+      "types": [
+        "string"
+      ],
+      "presence": 1,
+      "format": "iso8601"
+    },
+    "created": {
+      "types": [
+        "boolean"
+      ],
+      "presence": 1
+    },
+    "deleted": {
+      "types": [
+        "boolean"
+      ],
+      "presence": 1
+    },
+    "forced": {
+      "types": [
+        "boolean"
+      ],
+      "presence": 1
+    },
+    "head_commit": {
+      "types": [
+        "object"
+      ],
+      "presence": 1
+    },
+    "head_commit.author": {
+      "types": [
+        "object"
+      ],
+      "presence": 1
+    },
+    "head_commit.author.email": {
+      "types": [
+        "string"
+      ],
+      "presence": 1,
+      "format": "email"
+    },
+    "head_commit.author.name": {
+      "types": [
+        "string"
+      ],
+      "presence": 1
+    },
+    "head_commit.id": {
+      "types": [
+        "string"
+      ],
+      "presence": 1
+    },
+    "head_commit.message": {
+      "types": [
+        "string"
+      ],
+      "presence": 1
+    },
+    "head_commit.timestamp": {
+      "types": [
+        "string"
+      ],
+      "presence": 1,
+      "format": "iso8601"
+    },
+    "pusher": {
+      "types": [
+        "object"
+      ],
+      "presence": 1
+    },
+    "pusher.email": {
+      "types": [
+        "string"
+      ],
+      "presence": 1,
+      "format": "email"
+    },
+    "pusher.name": {
+      "types": [
+        "string"
+      ],
+      "presence": 1
+    },
+    "ref": {
+      "types": [
+        "string"
+      ],
+      "presence": 1
+    },
+    "repository": {
+      "types": [
+        "object"
+      ],
+      "presence": 1
+    },
+    "repository.full_name": {
+      "types": [
+        "string"
+      ],
+      "presence": 1
+    },
+    "repository.id": {
+      "types": [
+        "number"
+      ],
+      "presence": 1,
+      "intOnly": true
+    },
+    "repository.name": {
+      "types": [
+        "string"
+      ],
+      "presence": 1
+    },
+    "repository.owner": {
+      "types": [
+        "object"
+      ],
+      "presence": 1
+    },
+    "repository.owner.email": {
+      "types": [],
+      "presence": 1,
+      "nullable": true
+    },
+    "repository.owner.name": {
+      "types": [
+        "string"
+      ],
+      "presence": 1
+    },
+    "repository.private": {
+      "types": [
+        "boolean"
+      ],
+      "presence": 1
+    }
+  }
+}

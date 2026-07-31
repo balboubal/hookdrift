@@ -1,0 +1,63 @@
+{
+  "id": "evt_153cd8c07988537c7f5e755",
+  "object": "event",
+  "api_version": "2026-06-30",
+  "created": 1751371201,
+  "data": {
+    "object": {
+      "id": "ch_3871e440a30e3412414142a",
+      "object": "charge",
+      "amount": 4250,
+      "amount_captured": 4250,
+      "amount_refunded": 0,
+      "balance_transaction": "txn_3305bf57594226adff6683d",
+      "billing_details": {
+        "address": {
+          "city": "London",
+          "country": "DE"
+        },
+        "email": "user12@example.com",
+        "name": "Customer 12"
+      },
+      "captured": true,
+      "created": 1751371200,
+      "currency": "usd",
+      "customer": "cus_316cc0c5bd6fb5",
+      "description": null,
+      "disputed": false,
+      "failure_code": null,
+      "failure_message": null,
+      "livemode": true,
+      "metadata": {},
+      "outcome": {
+        "network_status": "approved_by_network",
+        "reason": null,
+        "risk_level": "normal",
+        "seller_message": "Payment complete.",
+        "type": "authorized"
+      },
+      "paid": true,
+      "payment_intent": "pi_314a62c435d0e9c0c4f5c9d",
+      "payment_method": "pm_184c671c8d075170c74a33c",
+      "payment_method_details": {
+        "card": {
+          "brand": "amex",
+          "country": "US",
+          "last4": "7273"
+        },
+        "type": "card"
+      },
+      "receipt_email": null,
+      "receipt_url": "https://pay.stripe.com/receipts/957c017d0c2439663f427cfe0da54527",
+      "refunded": false,
+      "status": "succeeded"
+    }
+  },
+  "livemode": true,
+  "pending_webhooks": 1,
+  "request": {
+    "id": "req_6c0f82ca345f7d",
+    "idempotency_key": null
+  },
+  "type": "charge.succeeded"
+}
