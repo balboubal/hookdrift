@@ -1,0 +1,13 @@
+{
+  "contractsDir": ".hookdrift",
+  "providers": {
+    "github": {
+      "fixtures": "fixtures*/github/**/*.json",
+      "eventPath": "@dirname"
+    }
+  },
+  "source": [],
+  "strict": false,
+  "minSamples": 5,
+  "ignore": []
+}

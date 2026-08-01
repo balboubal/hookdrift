@@ -13,3 +13,8 @@ examples/stripe-live/.hookdrift/
 examples/stripe-live/probe.json
 examples/stripe-live/listen.log
 examples/stripe-live/listener.pid
+
+# GitHub's published webhook payload examples, fetched for validation. Public
+# sample data, but third-party content - kept out of the repo, re-fetchable.
+examples/github-live/fixtures*/
+examples/github-live/.hookdrift/
