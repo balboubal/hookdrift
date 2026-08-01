@@ -1,8 +1,22 @@
 #!/usr/bin/env node
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { runInfer } from "./commands/infer.js";
 import { runCheck } from "./commands/check.js";
 import { runImpact } from "./commands/impact.js";
 import { runInit, runExplain, usage } from "./commands/misc.js";
+
+/** Read from package.json so the CLI and the published package never disagree. */
+export function readVersion(): string {
+  try {
+    const pkgPath = join(dirname(fileURLToPath(import.meta.url)), "..", "package.json");
+    const pkg = JSON.parse(readFileSync(pkgPath, "utf8")) as { version?: string };
+    return pkg.version ?? "unknown";
+  } catch {
+    return "unknown";
+  }
+}
 
 export function main(argv: string[], cwd: string): number {
   const [command, ...rest] = argv;
@@ -28,9 +42,15 @@ export function main(argv: string[], cwd: string): number {
         return runImpact(cwd);
       case "explain":
         return runExplain(cwd);
+      case "--version":
+      case "-v":
+      case "version":
+        console.log(readVersion());
+        return 0;
       case undefined:
       case "help":
       case "--help":
+      case "-h":
         return usage();
       default:
         console.error(`Unknown command: ${command}\n`);

@@ -2,3 +2,14 @@ node_modules/
 dist/
 *.tsbuildinfo
 .DS_Store
+
+# Locally captured Stripe payloads. Real webhook captures can carry account
+# details (the Stripe account email appears in account.updated events), so the
+# capture output stays out of the repo - only the tooling is committed.
+examples/stripe-live/fixtures*/
+examples/stripe-live/pages/
+examples/stripe-live/events*.json*
+examples/stripe-live/.hookdrift/
+examples/stripe-live/probe.json
+examples/stripe-live/listen.log
+examples/stripe-live/listener.pid

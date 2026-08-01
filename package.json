@@ -3,6 +3,15 @@
   "version": "0.1.0",
   "description": "Detect when a third-party webhook payload changes shape — before it silently breaks your handler.",
   "license": "MIT",
+  "author": "balboubal",
+  "homepage": "https://github.com/balboubal/hookdrift#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/balboubal/hookdrift.git"
+  },
+  "bugs": {
+    "url": "https://github.com/balboubal/hookdrift/issues"
+  },
   "type": "module",
   "bin": {
     "hookdrift": "dist/cli.js"
@@ -16,7 +25,8 @@
   "scripts": {
     "build": "tsc",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "prepublishOnly": "npm run build && npm test"
   },
   "keywords": [
     "webhook",

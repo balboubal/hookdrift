@@ -49,6 +49,7 @@ Usage:
       --show-suppressed             include findings silenced by ignore rules
   hookdrift impact                  map last check's findings to code references
   hookdrift explain                 human-readable report of the last check
+  hookdrift --version               print the installed version
 
 Contracts live in .hookdrift/<provider>/<event>.contract.json — commit them.
 hookdrift makes no network calls.`);

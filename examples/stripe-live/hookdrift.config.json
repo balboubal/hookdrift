@@ -1,0 +1,13 @@
+{
+  "contractsDir": ".hookdrift",
+  "providers": {
+    "stripe": {
+      "fixtures": "fixtures*/stripe/**/*.json",
+      "eventPath": "type"
+    }
+  },
+  "source": [],
+  "strict": false,
+  "minSamples": 5,
+  "ignore": []
+}

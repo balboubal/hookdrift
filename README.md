@@ -75,7 +75,7 @@ Commands: `init` · `infer [dir]` (`--rebuild` to allow narrowing) · `check [di
 ## GitHub Action
 
 ```yaml
-- uses: <org>/hookdrift@v1
+- uses: balboubal/hookdrift@v1
   with:
     strict: false
 ```

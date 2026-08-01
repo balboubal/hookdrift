@@ -1,12 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 370" width="780" height="370"
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 420" width="780" height="420"
      font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12.5">
   <!--
     Animation uses SMIL <animate> elements and inline fill attributes only:
     no <style> block, so it still renders (statically) even if a sanitizer
     strips CSS, and animates in any <img>-rendered context. Loops every 14s.
+    The findings shown are the complete output of a real run against
+    examples/demo - the counts in the summary line match the lines above it.
   -->
-  <rect width="780" height="370" rx="8" fill="#0d1117" stroke="#30363d"/>
+  <rect width="780" height="420" rx="8" fill="#0d1117" stroke="#30363d"/>
   <circle cx="22" cy="20" r="5" fill="#ff5f56"/>
   <circle cx="40" cy="20" r="5" fill="#ffbd2e"/>
   <circle cx="58" cy="20" r="5" fill="#27c93f"/>
@@ -17,62 +19,74 @@
     <tspan fill="#7ee787">$</tspan><tspan dx="8">npx hookdrift infer ./fixtures</tspan>
   </text>
   <text x="20" y="78" fill="#e6edf3" opacity="0">
-    <animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.0857;0.1036;0.93;1" dur="14s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.0714;0.0893;0.93;1" dur="14s" repeatCount="indefinite"/>
     stripe/charge.succeeded: created (36 samples, 53 paths)
   </text>
   <text x="20" y="96" fill="#e6edf3" opacity="0">
-    <animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.1071;0.125;0.93;1" dur="14s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.0929;0.1107;0.93;1" dur="14s" repeatCount="indefinite"/>
     github/push: created (5 samples, 32 paths)
   </text>
   <text x="20" y="114" fill="#8b949e" opacity="0">
-    <animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.1286;0.1464;0.93;1" dur="14s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.1143;0.1321;0.93;1" dur="14s" repeatCount="indefinite"/>
     2 contract(s) in .hookdrift/ — commit them to git.
   </text>
 
   <text x="20" y="146" fill="#e6edf3" opacity="0">
-    <animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.2286;0.2464;0.93;1" dur="14s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.1857;0.2036;0.93;1" dur="14s" repeatCount="indefinite"/>
     <tspan fill="#7ee787">$</tspan><tspan dx="8">npx hookdrift check ./fixtures</tspan><tspan fill="#8b949e" dx="16"># weeks later: fresh payloads</tspan>
   </text>
   <text x="20" y="168" fill="#e6edf3" opacity="0">
-    <animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.3;0.3179;0.93;1" dur="14s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.2429;0.2607;0.93;1" dur="14s" repeatCount="indefinite"/>
     stripe/charge.succeeded
   </text>
 
-  <text x="34" y="188" opacity="0">
-    <animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.3286;0.3464;0.93;1" dur="14s" repeatCount="indefinite"/>
-    <tspan fill="#ff7b72">BREAKING</tspan><tspan fill="#e6edf3" dx="10">data.object.amount_refunded</tspan><tspan fill="#8b949e" dx="10">moved to data.object.totals.amount_refunded</tspan>
+  <text y="188" opacity="0">
+    <animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.2714;0.2893;0.93;1" dur="14s" repeatCount="indefinite"/>
+    <tspan x="34" fill="#ff7b72">BREAKING</tspan><tspan x="112" fill="#e6edf3">data.object.amount_refunded</tspan><tspan x="370" fill="#8b949e">moved to data.object.totals.amount_refunded</tspan>
   </text>
-  <text x="34" y="206" opacity="0">
+  <text y="206" opacity="0">
+    <animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.2929;0.3107;0.93;1" dur="14s" repeatCount="indefinite"/>
+    <tspan x="34" fill="#ff7b72">BREAKING</tspan><tspan x="112" fill="#e6edf3">data.object.paid</tspan><tspan x="370" fill="#8b949e">null observed (never null in 36 samples)</tspan>
+  </text>
+  <text y="224" opacity="0">
+    <animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.3143;0.3321;0.93;1" dur="14s" repeatCount="indefinite"/>
+    <tspan x="34" fill="#e3b341">WARNING</tspan><tspan x="112" fill="#e6edf3">data.object.amount_captured</tspan><tspan x="370" fill="#8b949e">precision shift: integers → floats</tspan>
+  </text>
+  <text y="242" opacity="0">
+    <animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.3357;0.3536;0.93;1" dur="14s" repeatCount="indefinite"/>
+    <tspan x="34" fill="#e3b341">WARNING</tspan><tspan x="112" fill="#e6edf3">data.object.billing_details.email</tspan><tspan x="370" fill="#8b949e">format changed: email → none</tspan>
+  </text>
+  <text y="260" opacity="0">
     <animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.3571;0.375;0.93;1" dur="14s" repeatCount="indefinite"/>
-    <tspan fill="#ff7b72">BREAKING</tspan><tspan fill="#e6edf3" dx="10">data.object.paid</tspan><tspan fill="#8b949e" dx="10">null observed (never null in 36 contract samples)</tspan>
+    <tspan x="34" fill="#e3b341">WARNING</tspan><tspan x="112" fill="#e6edf3">data.object.currency</tspan><tspan x="370" fill="#8b949e">enum value [gbp] no longer observed</tspan>
   </text>
-  <text x="34" y="224" opacity="0">
-    <animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.3857;0.4036;0.93;1" dur="14s" repeatCount="indefinite"/>
-    <tspan fill="#e3b341">WARNING</tspan><tspan fill="#e6edf3" dx="17">data.object.currency</tspan><tspan fill="#8b949e" dx="10">new enum value [chf] — switches will miss it</tspan>
+  <text y="278" opacity="0">
+    <animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.3786;0.3964;0.93;1" dur="14s" repeatCount="indefinite"/>
+    <tspan x="34" fill="#e3b341">WARNING</tspan><tspan x="112" fill="#e6edf3">data.object.currency</tspan><tspan x="370" fill="#8b949e">new enum value [chf] — switches miss it</tspan>
   </text>
-  <text x="34" y="242" opacity="0">
-    <animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.4143;0.4321;0.93;1" dur="14s" repeatCount="indefinite"/>
-    <tspan fill="#e3b341">WARNING</tspan><tspan fill="#e6edf3" dx="17">pending_webhooks</tspan><tspan fill="#8b949e" dx="10">required → optional (36/36 → 8/10 samples)</tspan>
+  <text y="296" opacity="0">
+    <animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.4;0.4179;0.93;1" dur="14s" repeatCount="indefinite"/>
+    <tspan x="34" fill="#e3b341">WARNING</tspan><tspan x="112" fill="#e6edf3">pending_webhooks</tspan><tspan x="370" fill="#8b949e">required → optional (36/36 → 8/10)</tspan>
   </text>
-  <text x="34" y="260" opacity="0">
+  <text y="314" opacity="0">
+    <animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.4214;0.4393;0.93;1" dur="14s" repeatCount="indefinite"/>
+    <tspan x="34" fill="#79c0ff">INFO</tspan><tspan x="112" fill="#e6edf3">data.object.balance_transaction</tspan><tspan x="370" fill="#8b949e">both shapes coexist — expandable</tspan>
+  </text>
+  <text y="332" opacity="0">
     <animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.4429;0.4607;0.93;1" dur="14s" repeatCount="indefinite"/>
-    <tspan fill="#79c0ff">INFO</tspan><tspan fill="#e6edf3" dx="42">data.object.balance_transaction</tspan><tspan fill="#8b949e" dx="10">both shapes coexist — expandable</tspan>
-  </text>
-  <text x="34" y="278" opacity="0">
-    <animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.4714;0.4893;0.93;1" dur="14s" repeatCount="indefinite"/>
-    <tspan fill="#79c0ff">INFO</tspan><tspan fill="#e6edf3" dx="42">data.object.totals</tspan><tspan fill="#8b949e" dx="10">new field appeared in 10/10 new samples</tspan>
+    <tspan x="34" fill="#79c0ff">INFO</tspan><tspan x="112" fill="#e6edf3">data.object.totals</tspan><tspan x="370" fill="#8b949e">new field in 10/10 new samples</tspan>
   </text>
 
-  <text x="20" y="306" fill="#e6edf3" opacity="0">
-    <animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.5143;0.5321;0.93;1" dur="14s" repeatCount="indefinite"/>
+  <text x="20" y="360" fill="#e6edf3" opacity="0">
+    <animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.4857;0.5036;0.93;1" dur="14s" repeatCount="indefinite"/>
     2 breaking, 5 warning(s), 2 info <tspan fill="#8b949e">(1 suppressed) across 2 contract(s)</tspan>
   </text>
-  <text x="20" y="334" fill="#8b949e" opacity="0">
-    <animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.5571;0.575;0.93;1" dur="14s" repeatCount="indefinite"/>
+  <text x="20" y="384" fill="#8b949e" opacity="0">
+    <animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.5214;0.5393;0.93;1" dur="14s" repeatCount="indefinite"/>
     exit 1 — CI fails here, instead of a customer finding out next week
   </text>
 
-  <rect x="20" y="346" width="8" height="14" fill="#7ee787" opacity="0.9">
+  <rect x="20" y="396" width="8" height="14" fill="#7ee787" opacity="0.9">
     <animate attributeName="opacity" values="0.9;0.9;0;0;0.9" keyTimes="0;0.49;0.5;0.99;1" dur="1.1s" repeatCount="indefinite"/>
   </rect>
 </svg>
