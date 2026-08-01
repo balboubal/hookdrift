@@ -204,6 +204,96 @@ describe("polymorphic fields (expandable-field handling)", () => {
   });
 });
 
+describe("absence scaled by evidence strength (path_removed)", () => {
+  // Found by checking real Stripe batch 2 against batch 1: data.object.shipping.*
+  // sat at presence 5/21 and was missing from 6 new samples, which the old rule
+  // called BREAKING five times over. That absence has ~20% probability by pure
+  // sampling - not evidence of anything.
+  const withOptional = (total: number, withField: number) =>
+    Array.from({ length: total }, (_, i) =>
+      i < withField ? { id: "x", opt: "here" } : { id: "x" },
+    );
+
+  it("required field (presence 1.0) vanishing is BREAKING", () => {
+    const c = buildContract("p", "e", observe(withOptional(20, 20)), NOW);
+    expect(c.fields["opt"]!.presence).toBe(1);
+    const f = diffContract(c, observe([{ id: "x" }, { id: "x" }]), { minSamples: 1 }).find(
+      (x) => x.path === "opt",
+    )!;
+    expect(f.severity).toBe("BREAKING");
+    expect(f.message).toContain("p=0");
+  });
+
+  it("optional field (presence ~0.24) absent from 6 samples is NOT BREAKING", () => {
+    // 5/21 = 0.2381 -> p = 0.7619^6 = 0.1956, just inside the WARNING band.
+    const c = buildContract("p", "e", observe(withOptional(21, 5)), NOW);
+    expect(c.fields["opt"]!.presence).toBe(0.2381);
+    const fresh = Array.from({ length: 6 }, () => ({ id: "x" }));
+    const f = diffContract(c, observe(fresh), { minSamples: 1 }).find((x) => x.path === "opt")!;
+    expect(f.severity).not.toBe("BREAKING");
+    expect(f.severity).toBe("WARNING");
+    expect(f.message).toContain("p=0.19");
+  });
+
+  it("a clearly optional field absent from a small batch is INFO", () => {
+    // 5/25 = 0.2 -> p = 0.8^3 = 0.512, comfortably sampling noise.
+    const c = buildContract("p", "e", observe(withOptional(25, 5)), NOW);
+    const fresh = Array.from({ length: 3 }, () => ({ id: "x" }));
+    const f = diffContract(c, observe(fresh), { minSamples: 1 }).find((x) => x.path === "opt")!;
+    expect(f.severity).toBe("INFO");
+    expect(f.message).toContain("sampling noise");
+  });
+
+  it("a parent plus four children vanishing together is exactly one finding", () => {
+    const old = Array.from({ length: 10 }, () => ({
+      id: "x",
+      shipping: { address: { city: "London" }, carrier: "ups", name: "A", phone: "1" },
+    }));
+    const c = buildContract("p", "e", observe(old), NOW);
+    const fresh = Array.from({ length: 10 }, () => ({ id: "x" }));
+    const removals = diffContract(c, observe(fresh), { minSamples: 1 }).filter(
+      (x) => x.kind === "path_removed",
+    );
+    expect(removals).toHaveLength(1);
+    expect(removals[0]!.path).toBe("shipping");
+    expect(removals[0]!.severity).toBe("BREAKING"); // presence 1.0 - genuinely gone
+  });
+
+  it("collapses to the parent even when the parent itself is still present as null", () => {
+    // The real Stripe shape: `shipping` arrives null, taking its children with it.
+    const old = Array.from({ length: 10 }, () => ({
+      id: "x",
+      shipping: { carrier: "ups", name: "A" },
+    }));
+    const c = buildContract("p", "e", observe(old), NOW);
+    const fresh = Array.from({ length: 10 }, () => ({ id: "x", shipping: null }));
+    const removals = diffContract(c, observe(fresh), { minSamples: 1 }).filter(
+      (x) => x.kind === "path_removed",
+    );
+    expect(removals).toHaveLength(1);
+    expect(removals[0]!.path).toBe("shipping");
+    expect(removals[0]!.message).toContain("path(s) beneath it are absent");
+  });
+
+  it("collapses redundant presence shifts under a shared parent", () => {
+    const old = [
+      ...Array.from({ length: 3 }, () => ({ id: "x", opts: { k: { loc: "en" } } })),
+      ...Array.from({ length: 7 }, () => ({ id: "x" })),
+    ];
+    const c = buildContract("p", "e", observe(old), NOW);
+    const fresh = [
+      ...Array.from({ length: 4 }, () => ({ id: "x", opts: { k: { loc: "en" } } })),
+      ...Array.from({ length: 1 }, () => ({ id: "x" })),
+    ];
+    const shifts = diffContract(c, observe(fresh), { minSamples: 1 }).filter(
+      (x) => x.kind === "presence_shift",
+    );
+    expect(shifts).toHaveLength(1);
+    expect(shifts[0]!.path).toBe("opts");
+    expect(shifts[0]!.message).toContain("path(s) beneath it");
+  });
+});
+
 describe("always-null fields gaining a value", () => {
   // Found by running against 156 real Stripe payloads: Stripe is dense with
   // fields that are null in every test-mode sample (application, failure_code,

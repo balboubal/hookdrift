@@ -1,4 +1,11 @@
-import type { Contract, FieldSchema, Finding, Observation, PathStats } from "../types.js";
+import type {
+  Contract,
+  FieldSchema,
+  Finding,
+  Observation,
+  PathStats,
+  Severity,
+} from "../types.js";
 import { pickFormat } from "./formats.js";
 
 /** enum-removal is only BREAKING when the contract was this confident. */
@@ -14,6 +21,32 @@ export interface DiffOptions {
 }
 
 const SEVERITY_ORDER = { BREAKING: 0, WARNING: 1, INFO: 2 } as const;
+
+/** Absence is conclusive below this probability of being coincidence. */
+export const ABSENCE_BREAKING_P = 0.01;
+/** ...and is ordinary sampling noise at or above this one. */
+export const ABSENCE_INFO_P = 0.2;
+
+/**
+ * Probability that a path's absence from N new samples is pure coincidence,
+ * given how often the contract actually observed it: (1 - presence)^N.
+ * A required path (presence 1.0) yields 0, so its disappearance is always
+ * conclusive; an optional path missing from a small batch yields a high number
+ * and is treated as the non-event it usually is.
+ */
+export function coincidenceProbability(presence: number, n: number): number {
+  return Math.pow(1 - presence, n);
+}
+
+export function severityForAbsence(p: number): Severity {
+  if (p < ABSENCE_BREAKING_P) return "BREAKING";
+  if (p < ABSENCE_INFO_P) return "WARNING";
+  return "INFO";
+}
+
+function round4(n: number): number {
+  return Math.round(n * 10000) / 10000;
+}
 
 function leafOf(path: string): string {
   return path.split(".").pop()!;
@@ -101,37 +134,86 @@ export function diffContract(
     }
   }
 
-  // ---- Structural roots whose descendants should be suppressed (one finding
-  // for the subtree, not one per leaf). Note that paths lost because a parent
-  // object collapsed to a scalar are NOT suppressed here - that is real data
-  // loss and each vanished path breaks the code that reads it.
-  const removedRoots = new Set(removed.filter((p) => !hasAncestorIn(p, new Set(removed))));
   const typeChangeRoots = new Set<string>();
 
-  for (const path of removed) {
-    if (hasAncestorIn(path, removedRoots) && !removedRoots.has(path)) continue;
+  // ---- Moves are reported per path and excluded from the absence machinery:
+  // the leaf reappeared elsewhere, so it did not vanish.
+  for (const [path, to] of movedTo) {
     const field = contract.fields[path]!;
-    const contain = Math.round(field.presence * C);
-    const to = movedTo.get(path);
-    if (to) {
-      add({
-        path,
-        severity: "BREAKING",
-        kind: "path_moved",
-        movedTo: to,
-        message: `moved to ${to} (was at ${path} in ${contain}/${C} contract samples; new location seen in ${obs.paths.get(to)!.containCount}/${N} new samples)`,
-      });
-    } else {
-      add({
-        path,
-        severity: "BREAKING",
-        kind: "path_removed",
-        message: `removed (was present in ${contain}/${C} contract samples; absent from all ${N} new samples)`,
-      });
+    add({
+      path,
+      severity: "BREAKING",
+      kind: "path_moved",
+      movedTo: to,
+      message: `moved to ${to} (was at ${path} in ${Math.round(field.presence * C)}/${C} contract samples; new location seen in ${obs.paths.get(to)!.containCount}/${N} new samples)`,
+    });
+  }
+
+  // ---- Absence, weighted by evidence. A path the contract saw in every sample
+  // vanishing is conclusive; an optional path missing from a handful of new
+  // samples is ordinary sampling. `coincidenceProbability` makes that explicit
+  // and the severity follows from it, so a finding carries its own confidence.
+  const absent = removed.filter((p) => !movedTo.has(p));
+  const absentSet = new Set(absent);
+  const allContractPaths = Object.keys(contract.fields);
+
+  // A path anchors a collapsed finding when every contract path beneath it is
+  // absent too - the whole subtree went together, so it is one event, not one
+  // per leaf. The anchor itself need not be absent: an optional object that
+  // arrives as null takes all its children with it.
+  const subtreeAnchors = new Set<string>();
+  for (const a of allContractPaths) {
+    const kids = allContractPaths.filter((p) => isDescendant(p, a));
+    if (kids.length > 0 && kids.every((k) => absentSet.has(k))) subtreeAnchors.add(a);
+  }
+  const anchorFor = (p: string): string => {
+    let best: string | null = null;
+    // Ancestors form a chain, so the shortest matching one is the highest.
+    for (const a of subtreeAnchors) {
+      if (isDescendant(p, a) && (best === null || a.length < best.length)) best = a;
     }
+    return best ?? p;
+  };
+
+  const grouped = new Map<string, string[]>();
+  for (const p of absent) {
+    const anchor = anchorFor(p);
+    const list = grouped.get(anchor);
+    if (list) list.push(p);
+    else grouped.set(anchor, [p]);
+  }
+
+  for (const [anchor, members] of grouped) {
+    // Strongest evidence in the subtree governs: if any vanished path was
+    // required, the subtree's disappearance is not explained by sampling.
+    const presence = Math.max(...members.map((m) => contract.fields[m]!.presence));
+    const p = coincidenceProbability(presence, N);
+    const contain = Math.round(presence * C);
+    const anchorAbsent = absentSet.has(anchor);
+    const extraKids = members.filter((m) => m !== anchor).length;
+    const scope = anchorAbsent
+      ? extraKids > 0
+        ? ` (with all ${extraKids} path(s) beneath it)`
+        : ""
+      : ` - all ${members.length} path(s) beneath it are absent`;
+    add({
+      path: anchor,
+      severity: severityForAbsence(p),
+      kind: "path_removed",
+      message:
+        `${anchorAbsent ? "absent from all" : "subtree absent from all"} ${N} new sample(s)${scope}; ` +
+        `contract presence ${round4(presence)} (${contain}/${C} samples), ` +
+        `so absence across ${N} sample(s) is p=${round4(p)} by chance` +
+        (p >= 0.2
+          ? " - too likely to be sampling noise to treat as a change"
+          : p >= 0.01
+            ? " - notable but not conclusive"
+            : ""),
+    });
   }
 
   // ---- Paths present in both: type, nullability, enum, presence, format.
+  const presenceShifts: { path: string; from: number; to: number; containCount: number }[] = [];
   for (const [path, field] of Object.entries(contract.fields)) {
     const stats = obs.paths.get(path);
     if (!stats) continue;
@@ -277,13 +359,13 @@ export function diffContract(
       freshPresence < 1 &&
       Math.abs(freshPresence - field.presence) >= PRESENCE_SHIFT_MIN
     ) {
-      add({
+      // Collected rather than emitted: an optional sub-object and everything
+      // under it shift together, which is one event, not one per leaf.
+      presenceShifts.push({
         path,
-        severity: "INFO",
-        kind: "presence_shift",
-        message:
-          `presence moved ${field.presence} -> ${Math.round(freshPresence * 10000) / 10000} (${stats.containCount}/${N} new samples), still optional` +
-          (fewSamples ? ` (only ${N} new sample(s), below minSamples=${minSamples})` : ""),
+        from: field.presence,
+        to: round4(freshPresence),
+        containCount: stats.containCount,
       });
     }
 
@@ -311,6 +393,31 @@ export function diffContract(
         message: `numeric precision shift: contract observed integers only across ${C} samples, floats appear in new samples`,
       });
     }
+  }
+
+  // ---- Emit presence shifts, collapsed: a child whose ancestor shifted by the
+  // same ratios is restating the parent's move, not reporting its own.
+  const shiftKey = (s: { from: number; to: number }) => `${s.from}->${s.to}`;
+  for (const s of presenceShifts) {
+    const redundant = presenceShifts.some(
+      (other) =>
+        other.path !== s.path &&
+        isDescendant(s.path, other.path) &&
+        shiftKey(other) === shiftKey(s),
+    );
+    if (redundant) continue;
+    const covered = presenceShifts.filter(
+      (o) => o.path !== s.path && isDescendant(o.path, s.path) && shiftKey(o) === shiftKey(s),
+    ).length;
+    add({
+      path: s.path,
+      severity: "INFO",
+      kind: "presence_shift",
+      message:
+        `presence moved ${s.from} -> ${s.to} (${s.containCount}/${N} new samples), still optional` +
+        (covered > 0 ? ` (with ${covered} path(s) beneath it)` : "") +
+        (fewSamples ? ` (only ${N} new sample(s), below minSamples=${minSamples})` : ""),
+    });
   }
 
   // ---- New optional fields (one finding per subtree root, moves excluded).

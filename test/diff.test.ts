@@ -22,9 +22,9 @@ const one = (fs: Finding[], kind: string) => {
 describe("BREAKING", () => {
   it("path present in contract, absent from all new samples", () => {
     const f = one(diff([{ id: "a", tax: 5 }], [{ id: "b" }]), "path_removed");
-    expect(f.severity).toBe("BREAKING");
+    expect(f.severity).toBe("BREAKING"); // presence 1.0 -> p = 0
     expect(f.path).toBe("tax");
-    expect(f.message).toContain("1/1 contract samples");
+    expect(f.message).toContain("contract presence 1 (1/1 samples)");
   });
 
   it("incompatible type change (string → number)", () => {
