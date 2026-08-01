@@ -143,7 +143,24 @@ export function diffContract(
     const typeSpan = `contract [${field.types.join(", ")}] -> observed [${[...stats.types].join(", ")}] in ${stats.containCount}/${N} new samples`;
     if (extra.length > 0) {
       const verdict = expandableVerdict(field, stats);
-      if (field.polymorphic) {
+      if (field.types.length === 0) {
+        // The contract only ever observed null here, so there is no recorded
+        // type for a value to contradict - nothing has actually "changed
+        // type". But code written against a field that was always null (a ??
+        // default, optional chaining, an early return) will now silently take
+        // a different branch, which is precisely the quiet failure this tool
+        // exists to surface. Warn: loud enough to be read, not enough to fail
+        // CI by default. Deliberately narrow - it applies only to a genuinely
+        // empty types array, never to a nullable field with a recorded type.
+        const nullSamples = Math.round(field.presence * C);
+        add({
+          path,
+          severity: "WARNING",
+          kind: "type_changed",
+          message: `was null in all ${nullSamples} contract sample(s) and now carries a value of type ${[...stats.types].join(" | ")} (${stats.valueCount} non-null value(s) in ${N} new samples) - code branching on null may behave differently`,
+        });
+        typeChangeRoots.add(path);
+      } else if (field.polymorphic) {
         add({
           path,
           severity: "INFO",

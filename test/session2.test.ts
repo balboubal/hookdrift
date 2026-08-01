@@ -204,6 +204,66 @@ describe("polymorphic fields (expandable-field handling)", () => {
   });
 });
 
+describe("always-null fields gaining a value", () => {
+  // Found by running against 156 real Stripe payloads: Stripe is dense with
+  // fields that are null in every test-mode sample (application, failure_code,
+  // business_profile.support_email...). Those infer to "types": [], and before
+  // this fix the first real value reported BREAKING.
+  const alwaysNull = (n: number) =>
+    Array.from({ length: n }, () => ({ support_email: null, id: "x" }));
+
+  it("infers an empty types array with nullable set", () => {
+    const c = buildContract("stripe", "account.updated", observe(alwaysNull(20)), NOW);
+    expect(c.fields["support_email"]!.types).toEqual([]);
+    expect(c.fields["support_email"]!.nullable).toBe(true);
+  });
+
+  it("REGRESSION: gaining a value is WARNING, not BREAKING", () => {
+    const c = buildContract("stripe", "account.updated", observe(alwaysNull(20)), NOW);
+    const fresh = Array.from({ length: 20 }, (_, i) => ({
+      support_email: i % 2 === 0 ? null : "help@example.com",
+      id: "x",
+    }));
+    const f = diffContract(c, observe(fresh), { minSamples: 10 }).find(
+      (x) => x.path === "support_email",
+    )!;
+    expect(f.severity).toBe("WARNING");
+    expect(f.severity).not.toBe("BREAKING");
+    expect(f.message).toContain("was null in all 20 contract sample(s)");
+    expect(f.message).toContain("type string");
+    expect(f.message).toContain("code branching on null may behave differently");
+  });
+
+  it("staying null produces no finding at all", () => {
+    const c = buildContract("stripe", "account.updated", observe(alwaysNull(20)), NOW);
+    const findings = diffContract(c, observe(alwaysNull(20)), { minSamples: 10 });
+    expect(findings.filter((x) => x.path === "support_email")).toHaveLength(0);
+  });
+
+  it("suppresses child findings when a null field becomes an object", () => {
+    const c = buildContract("p", "e", observe(alwaysNull(20)), NOW);
+    const fresh = Array.from({ length: 20 }, () => ({
+      support_email: { primary: "a@b.com", verified: true },
+      id: "x",
+    }));
+    const findings = diffContract(c, observe(fresh), { minSamples: 10 });
+    expect(findings.filter((x) => x.kind === "new_field")).toHaveLength(0);
+    expect(findings.find((x) => x.path === "support_email")!.severity).toBe("WARNING");
+  });
+
+  it("the lenient path does NOT apply to a nullable field with a recorded type", () => {
+    // ["string"] + nullable arriving as a number is a genuine incompatible change.
+    const samples = Array.from({ length: 20 }, (_, i) => ({ v: i % 2 === 0 ? null : "abc" }));
+    const c = buildContract("p", "e", observe(samples), NOW);
+    expect(c.fields["v"]!.types).toEqual(["string"]);
+    expect(c.fields["v"]!.nullable).toBe(true);
+    const f = diffContract(c, observe([{ v: 42 }, { v: 43 }]), { minSamples: 1 }).find(
+      (x) => x.path === "v",
+    )!;
+    expect(f.severity).toBe("BREAKING");
+  });
+});
+
 describe("minimum-sample guards", () => {
   const contract = () =>
     buildContract("p", "e", observe(Array.from({ length: 20 }, () => ({ a: 1, b: 2 }))), NOW);
