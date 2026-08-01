@@ -25,7 +25,7 @@ const SEVERITY_ORDER = { BREAKING: 0, WARNING: 1, INFO: 2 } as const;
 /** Absence is conclusive below this probability of being coincidence. */
 export const ABSENCE_BREAKING_P = 0.01;
 /** ...and is ordinary sampling noise at or above this one. */
-export const ABSENCE_INFO_P = 0.2;
+export const ABSENCE_INFO_P = 0.15;
 
 /**
  * Probability that a path's absence from N new samples is pure coincidence,
@@ -42,6 +42,13 @@ export function severityForAbsence(p: number): Severity {
   if (p < ABSENCE_BREAKING_P) return "BREAKING";
   if (p < ABSENCE_INFO_P) return "WARNING";
   return "INFO";
+}
+
+/** Plain-language tail explaining what the computed probability means. */
+function evidenceNote(p: number): string {
+  if (p >= ABSENCE_INFO_P) return " - too likely to be sampling noise to treat as a change";
+  if (p >= ABSENCE_BREAKING_P) return " - notable but not conclusive";
+  return "";
 }
 
 function round4(n: number): number {
@@ -140,12 +147,23 @@ export function diffContract(
   // the leaf reappeared elsewhere, so it did not vanish.
   for (const [path, to] of movedTo) {
     const field = contract.fields[path]!;
+    // "X moved to Y" entails "X is gone", so a move can never be more certain
+    // than that disappearance. Cap it at the same evidence-scaled severity:
+    // two unrelated optional sub-objects sharing a leaf name is ordinary in
+    // real payloads (GitHub sends `answer` on discussion.answered and
+    // `old_answer` on discussion.unanswered), and matching leaf name plus type
+    // signature is far too weak on its own to fail a build.
+    const p = coincidenceProbability(field.presence, N);
     add({
       path,
-      severity: "BREAKING",
+      severity: severityForAbsence(p),
       kind: "path_moved",
       movedTo: to,
-      message: `moved to ${to} (was at ${path} in ${Math.round(field.presence * C)}/${C} contract samples; new location seen in ${obs.paths.get(to)!.containCount}/${N} new samples)`,
+      message:
+        `moved to ${to} (was at ${path} in ${Math.round(field.presence * C)}/${C} contract samples; ` +
+        `new location seen in ${obs.paths.get(to)!.containCount}/${N} new samples); ` +
+        `contract presence ${round4(field.presence)}, so the disappearance this move presumes ` +
+        `is p=${round4(p)} by chance${evidenceNote(p)}`,
     });
   }
 
@@ -203,12 +221,7 @@ export function diffContract(
       message:
         `${anchorAbsent ? "absent from all" : "subtree absent from all"} ${N} new sample(s)${scope}; ` +
         `contract presence ${round4(presence)} (${contain}/${C} samples), ` +
-        `so absence across ${N} sample(s) is p=${round4(p)} by chance` +
-        (p >= 0.2
-          ? " - too likely to be sampling noise to treat as a change"
-          : p >= 0.01
-            ? " - notable but not conclusive"
-            : ""),
+        `so absence across ${N} sample(s) is p=${round4(p)} by chance${evidenceNote(p)}`,
     });
   }
 

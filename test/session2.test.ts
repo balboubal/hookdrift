@@ -224,14 +224,13 @@ describe("absence scaled by evidence strength (path_removed)", () => {
     expect(f.message).toContain("p=0");
   });
 
-  it("optional field (presence ~0.24) absent from 6 samples is NOT BREAKING", () => {
-    // 5/21 = 0.2381 -> p = 0.7619^6 = 0.1956, just inside the WARNING band.
+  it("optional field (presence ~0.24) absent from 6 samples is INFO", () => {
+    // 5/21 = 0.2381 -> p = 0.7619^6 = 0.1956, above the 0.15 INFO boundary.
     const c = buildContract("p", "e", observe(withOptional(21, 5)), NOW);
     expect(c.fields["opt"]!.presence).toBe(0.2381);
     const fresh = Array.from({ length: 6 }, () => ({ id: "x" }));
     const f = diffContract(c, observe(fresh), { minSamples: 1 }).find((x) => x.path === "opt")!;
-    expect(f.severity).not.toBe("BREAKING");
-    expect(f.severity).toBe("WARNING");
+    expect(f.severity).toBe("INFO");
     expect(f.message).toContain("p=0.19");
   });
 
@@ -273,6 +272,41 @@ describe("absence scaled by evidence strength (path_removed)", () => {
     expect(removals).toHaveLength(1);
     expect(removals[0]!.path).toBe("shipping");
     expect(removals[0]!.message).toContain("path(s) beneath it are absent");
+  });
+
+  it("REGRESSION: same-named leaves under different parents at low presence are INFO", () => {
+    // The real GitHub case. discussion.answered carries `answer`;
+    // discussion.unanswered carries `old_answer`. Different actions, both
+    // legitimate, nothing renamed - but every leaf name matched with an
+    // identical type signature, and the old rule called each one BREAKING.
+    const old = [
+      { action: "answered", answer: { author_association: "OWNER", body: "x", id: 1 } },
+      ...Array.from({ length: 6 }, () => ({ action: "created" })),
+    ];
+    const c = buildContract("github", "discussion", observe(old), NOW);
+    expect(c.fields["answer.body"]!.presence).toBeCloseTo(1 / 7, 3);
+
+    const fresh = [
+      { action: "unanswered", old_answer: { author_association: "OWNER", body: "x", id: 1 } },
+      ...Array.from({ length: 6 }, () => ({ action: "edited" })),
+    ];
+    const moves = diffContract(c, observe(fresh), { minSamples: 1 }).filter(
+      (x) => x.kind === "path_moved",
+    );
+    expect(moves.length).toBeGreaterThan(0); // the spurious matches still pair up
+    for (const m of moves) expect(m.severity).toBe("INFO"); // ...but none fail CI
+  });
+
+  it("a genuine rename at presence 1.0 stays BREAKING", () => {
+    const old = Array.from({ length: 10 }, () => ({ wrapper: { name: "n" } }));
+    const c = buildContract("p", "e", observe(old), NOW);
+    expect(c.fields["wrapper.name"]!.presence).toBe(1);
+    const fresh = Array.from({ length: 10 }, () => ({ renamed: { name: "n" } }));
+    const move = diffContract(c, observe(fresh), { minSamples: 1 }).find(
+      (x) => x.kind === "path_moved",
+    )!;
+    expect(move.severity).toBe("BREAKING");
+    expect(move.movedTo).toBe("renamed.name");
   });
 
   it("collapses redundant presence shifts under a shared parent", () => {
