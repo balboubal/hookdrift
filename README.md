@@ -6,6 +6,8 @@ Stripe adds a field. Shopify makes one nullable. GitHub renames a nested object.
 
 ![hookdrift demo](docs/demo.svg)
 
+<sub>The demo above is an animated SVG (SMIL `<animate>`, no `<style>` dependency, so it degrades to a readable static frame anywhere animation is stripped). Output is copied from a real run against [`examples/demo`](examples/demo).</sub>
+
 ## Quickstart
 
 ```bash
@@ -34,7 +36,7 @@ A provider changing their payload now shows up as a **reviewable diff in a pull 
 
 False-positive control is a design goal, not an afterthought:
 
-- **Expandable fields** (Stripe-style: an ID string *or* the expanded object, depending on your own request params) are detected automatically — mixed shapes with ID-like strings get `"polymorphic": true` in the contract and never report as breaking.
+- **Expandable fields** (Stripe-style: an ID string *or* the expanded object, depending on your own request params) are detected automatically and get `"polymorphic": true` in the contract. The evidence bar is deliberately strict: only *coexistence* — both shapes present in the same batch, strings all provider IDs — is treated as INFO, because coexistence is what proves both shapes are currently legitimate. If every payload flips to the other shape, that is a WARNING, not INFO: code reading the old shape breaks whether the cause was expansion being toggled or the provider genuinely replacing the field.
 - **Minimum-sample guards**: one missing payload is not evidence. Presence findings downgrade to INFO below `minSamples` (default 10); enum-removal is only BREAKING with ≥ 0.95 confidence and ≥ 50 new observations.
 - **Ignore rules** with mandatory visibility: suppressed findings are counted in every summary (`2 breaking, 5 warnings (1 suppressed)`) and shown with `--show-suppressed`. Nothing is ever silently dropped.
 

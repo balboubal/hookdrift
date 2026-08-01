@@ -34,17 +34,31 @@ function sameTypeSignature(a: FieldSchema, b: PathStats): boolean {
 }
 
 /**
- * A non-polymorphic string field arriving as an object (or the reverse) whose
- * string values are provider-style IDs is almost certainly an expandable field
- * (Stripe-style), not a break. Requires ID evidence: either the new batch's
- * strings are all ID-like, or the contract itself recorded the prefixed_id
- * format.
+ * Expandable-field (Stripe-style) evidence for a string/object type change.
+ *
+ * "coexist": the NEW batch itself contains both shapes and every string is an
+ * ID - coexistence proves both shapes are currently legitimate, so this is
+ * informational.
+ *
+ * "flip": the new batch contains only the shape the contract lacks (e.g. a
+ * contract of ID strings checked against all-object samples). The ID evidence
+ * (new strings all ID-like, or the contract's own prefixed_id format claim)
+ * says this is PROBABLY expansion being toggled - but code reading the old
+ * shape breaks either way, so this must never sink below WARNING.
+ *
+ * null: no ID evidence - treat as an ordinary breaking type change.
  */
-function looksExpandable(field: FieldSchema, stats: PathStats): boolean {
+function expandableVerdict(
+  field: FieldSchema,
+  stats: PathStats,
+): "coexist" | "flip" | null {
   const union = new Set([...field.types, ...stats.types]);
-  if (union.size !== 2 || !union.has("string") || !union.has("object")) return false;
-  if (stats.stringCount > 0) return stats.allIdLike;
-  return field.format === "prefixed_id";
+  if (union.size !== 2 || !union.has("string") || !union.has("object")) return null;
+  if (stats.types.has("string") && stats.types.has("object")) {
+    return stats.allIdLike ? "coexist" : null;
+  }
+  const evidence = stats.stringCount > 0 ? stats.allIdLike : field.format === "prefixed_id";
+  return evidence ? "flip" : null;
 }
 
 /**
@@ -88,7 +102,9 @@ export function diffContract(
   }
 
   // ---- Structural roots whose descendants should be suppressed (one finding
-  // for the subtree, not one per leaf).
+  // for the subtree, not one per leaf). Note that paths lost because a parent
+  // object collapsed to a scalar are NOT suppressed here - that is real data
+  // loss and each vanished path breaks the code that reads it.
   const removedRoots = new Set(removed.filter((p) => !hasAncestorIn(p, new Set(removed))));
   const typeChangeRoots = new Set<string>();
 
@@ -126,6 +142,7 @@ export function diffContract(
     const extra = [...stats.types].filter((t) => !field.types.includes(t));
     const typeSpan = `contract [${field.types.join(", ")}] -> observed [${[...stats.types].join(", ")}] in ${stats.containCount}/${N} new samples`;
     if (extra.length > 0) {
+      const verdict = expandableVerdict(field, stats);
       if (field.polymorphic) {
         add({
           path,
@@ -134,12 +151,22 @@ export function diffContract(
           message: `type union widened on polymorphic field: ${typeSpan}`,
         });
         typeChangeRoots.add(path);
-      } else if (looksExpandable(field, stats)) {
+      } else if (verdict === "coexist") {
         add({
           path,
           severity: "INFO",
           kind: "type_changed",
-          message: `type changed (${typeSpan}) but this looks like an expandable field - string values are provider IDs. Re-run \`hookdrift infer\` to record it as polymorphic, or set "polymorphic": true in the contract`,
+          message: `type changed (${typeSpan}) but both shapes coexist in the new batch and string values are provider IDs - this is an expandable field. Re-run \`hookdrift infer\` to record it as polymorphic, or set "polymorphic": true in the contract`,
+        });
+        typeChangeRoots.add(path);
+      } else if (verdict === "flip") {
+        const oldShape = field.types.includes("string") ? "ID string" : "object";
+        const newShape = oldShape === "ID string" ? "object" : "ID string";
+        add({
+          path,
+          severity: "WARNING",
+          kind: "type_changed",
+          message: `shape changed completely: every value in the new batch is an ${newShape} where the contract recorded ${oldShape}s (${typeSpan}). Either expansion was toggled on the provider request, or the provider genuinely replaced the field - code reading the ${oldShape} form will break. Verify which before re-running \`hookdrift infer\``,
         });
         typeChangeRoots.add(path);
       } else {

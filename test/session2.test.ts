@@ -151,6 +151,41 @@ describe("polymorphic fields (expandable-field handling)", () => {
     expect(f.message).toContain("narrowed");
   });
 
+  // REGRESSION (permanent): a complete shape replacement must never be INFO.
+  // An earlier version downgraded a contract of 40 ID strings checked against
+  // all-object samples to INFO on the contract's prefixed_id format alone -
+  // but code doing bt.startsWith("txn_") crashes on an object. Only
+  // coexistence within the new batch proves both shapes are legitimate.
+  it("REGRESSION: all-object replacement of an ID-string field is WARNING, never INFO", () => {
+    const oldS = Array.from({ length: 40 }, (_, i) => ({
+      bt: `txn_${String(i).padStart(2, "0")}AbCdEfGhIjKlMnOp`,
+    }));
+    const c = buildContract("p", "e", observe(oldS), NOW);
+    expect(c.fields["bt"]!.format).toBe("prefixed_id");
+    const newS = Array.from({ length: 20 }, (_, i) => ({ bt: { ...expanded, amount: i } }));
+    const fs = diffContract(c, observe(newS), { minSamples: 1 });
+    const f = fs.find((x) => x.path === "bt" && x.kind === "type_changed")!;
+    expect(f.severity).not.toBe("INFO");
+    expect(f.severity).toBe("WARNING");
+    expect(f.message).toContain("shape changed completely");
+    expect(f.message).toContain("Verify");
+  });
+
+  it("REGRESSION: coexistence of both shapes in the new batch stays INFO", () => {
+    const c = buildContract("p", "e", observe([{ bt: idStr }]), NOW);
+    const fs = diffContract(c, observe([{ bt: expanded }, { bt: idStr }]), { minSamples: 1 });
+    const f = fs.find((x) => x.path === "bt" && x.kind === "type_changed")!;
+    expect(f.severity).toBe("INFO");
+    expect(f.message).toContain("coexist");
+  });
+
+  it("the symmetric flip (object contract, all-ID-string batch) is also WARNING", () => {
+    const c = buildContract("p", "e", observe([{ bt: expanded }, { bt: { ...expanded } }]), NOW);
+    const fs = diffContract(c, observe([{ bt: idStr }, { bt: idStr }]), { minSamples: 1 });
+    const f = fs.find((x) => x.path === "bt" && x.kind === "type_changed")!;
+    expect(f.severity).toBe("WARNING");
+  });
+
   it("a genuine string -> number change on a non-polymorphic field stays BREAKING", () => {
     const c = buildContract("p", "e", observe([{ amount: "100" }]), NOW);
     const fs = diffContract(c, observe([{ amount: 100 }]), { minSamples: 1 });

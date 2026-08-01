@@ -1,5 +1,5 @@
 {
-  "ranAt": "2026-08-01T17:45:27.063Z",
+  "ranAt": "2026-08-01T18:21:54.247Z",
   "strict": false,
   "exitCode": 1,
   "findings": [
@@ -10,14 +10,7 @@
       "severity": "BREAKING",
       "kind": "path_moved",
       "movedTo": "data.object.totals.amount_refunded",
-      "message": "moved to data.object.totals.amount_refunded (was at data.object.amount_refunded in 36/36 contract samples; new location seen in 10/10 new samples)",
-      "refs": [
-        {
-          "file": "src/handler.ts",
-          "line": 4,
-          "score": 1
-        }
-      ]
+      "message": "moved to data.object.totals.amount_refunded (was at data.object.amount_refunded in 36/36 contract samples; new location seen in 10/10 new samples)"
     },
     {
       "provider": "stripe",
@@ -25,14 +18,7 @@
       "path": "data.object.paid",
       "severity": "BREAKING",
       "kind": "became_nullable",
-      "message": "null observed (1 null value(s) in 10 new samples; never null in 36 contract samples)",
-      "refs": [
-        {
-          "file": "src/handler.ts",
-          "line": 12,
-          "score": 1
-        }
-      ]
+      "message": "null observed (1 null value(s) in 10 new samples; never null in 36 contract samples)"
     },
     {
       "provider": "stripe",
@@ -56,14 +42,7 @@
       "path": "data.object.currency",
       "severity": "WARNING",
       "kind": "enum_value_removed",
-      "message": "enum value(s) no longer observed: [gbp] (enumConfidence 0.9167; 10 values in 10 new samples) - warning only: needs enumConfidence >= 0.95 and >= 50 observed values to be breaking",
-      "refs": [
-        {
-          "file": "src/handler.ts",
-          "line": 6,
-          "score": 1
-        }
-      ]
+      "message": "enum value(s) no longer observed: [gbp] (enumConfidence 0.9167; 10 values in 10 new samples) - warning only: needs enumConfidence >= 0.95 and >= 50 observed values to be breaking"
     },
     {
       "provider": "stripe",
@@ -71,14 +50,7 @@
       "path": "data.object.currency",
       "severity": "WARNING",
       "kind": "enum_value_added",
-      "message": "new enum value(s): [chf] - exhaustive switch/match statements over this field will miss them (10 values in 10 new samples)",
-      "refs": [
-        {
-          "file": "src/handler.ts",
-          "line": 6,
-          "score": 1
-        }
-      ]
+      "message": "new enum value(s): [chf] - exhaustive switch/match statements over this field will miss them (10 values in 10 new samples)"
     },
     {
       "provider": "stripe",
@@ -86,14 +58,7 @@
       "path": "pending_webhooks",
       "severity": "WARNING",
       "kind": "required_became_optional",
-      "message": "required -> optional: present in 36/36 contract samples but only 8/10 new samples",
-      "refs": [
-        {
-          "file": "src/handler.ts",
-          "line": 5,
-          "score": 1
-        }
-      ]
+      "message": "required -> optional: present in 36/36 contract samples but only 8/10 new samples"
     },
     {
       "provider": "stripe",
@@ -101,7 +66,7 @@
       "path": "data.object.balance_transaction",
       "severity": "INFO",
       "kind": "type_changed",
-      "message": "type changed (contract [string] -> observed [object, string] in 10/10 new samples) but this looks like an expandable field - string values are provider IDs. Re-run `hookdrift infer` to record it as polymorphic, or set \"polymorphic\": true in the contract"
+      "message": "type changed (contract [string] -> observed [object, string] in 10/10 new samples) but both shapes coexist in the new batch and string values are provider IDs - this is an expandable field. Re-run `hookdrift infer` to record it as polymorphic, or set \"polymorphic\": true in the contract"
     },
     {
       "provider": "stripe",
