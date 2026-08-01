@@ -9,6 +9,15 @@
       "object": "charge",
       "amount": 1500,
       "amount_captured": 1500,
+      "balance_transaction": {
+        "id": "txn_3d499b7e8c86746bb2918f2",
+        "object": "balance_transaction",
+        "amount": 1441,
+        "currency": "eur",
+        "fee": 59,
+        "net": 1382,
+        "status": "available"
+      },
       "billing_details": {
         "address": {
           "city": "London",

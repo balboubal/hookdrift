@@ -9,6 +9,15 @@
       "object": "charge",
       "amount": 3000,
       "amount_captured": 3000,
+      "balance_transaction": {
+        "id": "txn_33fa33740cd5eeccf261585",
+        "object": "balance_transaction",
+        "amount": 2941,
+        "currency": "usd",
+        "fee": 59,
+        "net": 2882,
+        "status": "available"
+      },
       "billing_details": {
         "address": {
           "city": "Paris",

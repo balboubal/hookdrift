@@ -1,5 +1,5 @@
 import type { JsonType, Observation, PathStats } from "../types.js";
-import { numberFormatCandidates, stringFormatCandidates } from "./formats.js";
+import { ID_LIKE, numberFormatCandidates, stringFormatCandidates } from "./formats.js";
 
 /** Above this many distinct values a path can no longer be an enum. */
 export const ENUM_MAX_DISTINCT = 12;
@@ -57,6 +57,7 @@ function newStats(): PathStats {
     stringCount: 0,
     distinct: new Set(),
     formatCandidates: null,
+    allIdLike: true,
     intOnly: true,
     sawNumber: false,
   };
@@ -85,6 +86,7 @@ export function observe(samples: unknown[]): Observation {
         if (occ.type === "string") {
           const v = occ.value as string;
           stats.stringCount += 1;
+          if (!ID_LIKE.test(v)) stats.allIdLike = false;
           if (stats.distinct) {
             stats.distinct.add(v);
             if (stats.distinct.size > ENUM_MAX_DISTINCT) stats.distinct = null;

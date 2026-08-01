@@ -10,12 +10,23 @@ function sortTypes(types: Iterable<JsonType>): JsonType[] {
   return [...types].sort((a, b) => TYPE_ORDER.indexOf(a) - TYPE_ORDER.indexOf(b));
 }
 
+/** Both shapes observed and every string is an ID → an expandable field. */
+function looksPolymorphic(stats: PathStats): boolean {
+  return (
+    stats.types.has("string") &&
+    stats.types.has("object") &&
+    stats.stringCount > 0 &&
+    stats.allIdLike
+  );
+}
+
 function fieldFromStats(stats: PathStats, totalSamples: number): FieldSchema {
   const field: FieldSchema = {
     types: sortTypes(stats.types),
     presence: round(stats.containCount / totalSamples),
   };
   if (stats.nullable) field.nullable = true;
+  if (looksPolymorphic(stats)) field.polymorphic = true;
   const format = pickFormat(stats.formatCandidates);
   if (format) field.format = format;
   if (stats.sawNumber) field.intOnly = stats.intOnly;
@@ -104,6 +115,18 @@ export function mergeContract(old: Contract, obs: Observation, now: string): Con
 
     // Format: keep the old claim only if every new value still matches it.
     if (p.format && s.formatCandidates?.has(p.format)) merged.format = p.format;
+
+    // Polymorphic is sticky once set; it can also be newly detected when the
+    // union shows both shapes and the ID-string evidence is there (from the
+    // new batch, or from the old contract's own format claim).
+    if (
+      p.polymorphic ||
+      (merged.types.includes("string") &&
+        merged.types.includes("object") &&
+        ((s.stringCount > 0 && s.allIdLike) || p.format === "prefixed_id"))
+    ) {
+      merged.polymorphic = true;
+    }
 
     // intOnly: floats anywhere mean floats forever (widening).
     if (p.intOnly !== undefined || s.sawNumber) {

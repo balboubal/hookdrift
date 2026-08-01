@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 import { runInfer } from "./commands/infer.js";
 import { runCheck } from "./commands/check.js";
-import { runInit, runExplain, runImpact, usage } from "./commands/misc.js";
+import { runImpact } from "./commands/impact.js";
+import { runInit, runExplain, usage } from "./commands/misc.js";
 
 export function main(argv: string[], cwd: string): number {
   const [command, ...rest] = argv;
@@ -16,7 +17,13 @@ export function main(argv: string[], cwd: string): number {
       case "infer":
         return runInfer({ cwd, fixturesDir: dir, rebuild: flags.has("--rebuild") });
       case "check":
-        return runCheck({ cwd, fixturesDir: dir, strict: flags.has("--strict") ? true : undefined });
+        return runCheck({
+          cwd,
+          fixturesDir: dir,
+          strict: flags.has("--strict") ? true : undefined,
+          showSuppressed: flags.has("--show-suppressed"),
+          json: flags.has("--json"),
+        });
       case "impact":
         return runImpact(cwd);
       case "explain":

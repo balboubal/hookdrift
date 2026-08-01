@@ -69,10 +69,22 @@ function charge(i, drift = false) {
     status: "succeeded",
   };
   if (drift) {
-    delete obj.balance_transaction; // BREAKING: path removed
+    if (i % 2 === 0) {
+      // Expandable field: same field arrives expanded when the merchant's own
+      // request asked for expansion. Should be INFO, not BREAKING.
+      obj.balance_transaction = {
+        id: obj.balance_transaction,
+        object: "balance_transaction",
+        amount: amount - 59,
+        currency: obj.currency,
+        fee: 59,
+        net: amount - 118,
+        status: "available",
+      };
+    }
     obj.totals = { amount_refunded: obj.amount_refunded }; // BREAKING: path moved
     delete obj.amount_refunded;
-    obj.calculated_statement_descriptor = "EXAMPLE.COM"; // INFO: new field
+    obj.calculated_statement_descriptor = "EXAMPLE.COM"; // INFO: new field (suppressed via config ignore)
   }
   const evt = {
     id: `evt_1${hex(rnd, 22)}`,

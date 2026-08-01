@@ -1,0 +1,94 @@
+name: "HookDrift"
+description: "Detect third-party webhook payload drift against committed contracts; posts one self-updating PR comment"
+branding:
+  icon: "activity"
+  color: "orange"
+
+inputs:
+  strict:
+    description: "Treat warnings as failures (same as hookdrift check --strict)"
+    default: "false"
+  working-directory:
+    description: "Directory containing hookdrift.config.json"
+    default: "."
+  version:
+    description: "hookdrift npm version to run"
+    default: "latest"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Run hookdrift check + impact
+      id: check
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        set +e
+        npx -y hookdrift@${{ inputs.version }} check ${{ inputs.strict == 'true' && '--strict' || '' }} --json > "$RUNNER_TEMP/hookdrift-report.json"
+        echo "exit_code=$?" >> "$GITHUB_OUTPUT"
+        npx -y hookdrift@${{ inputs.version }} impact > "$RUNNER_TEMP/hookdrift-impact.txt" 2>&1 || true
+
+    - name: Post or update the PR comment
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          const path = require('path');
+          const marker = '<!-- hookdrift-report -->';
+          let report;
+          try {
+            report = JSON.parse(fs.readFileSync(path.join(process.env.RUNNER_TEMP, 'hookdrift-report.json'), 'utf8'));
+          } catch (e) {
+            core.warning(`hookdrift produced no readable report: ${e.message}`);
+            return;
+          }
+          const findings = report.findings || [];
+          const active = findings.filter(f => !f.suppressed);
+          const { data: comments } = await github.rest.issues.listComments({
+            ...context.repo, issue_number: context.issue.number, per_page: 100,
+          });
+          const existing = comments.find(c => c.body && c.body.includes(marker));
+
+          // Silence is the default: post nothing when there is nothing to say.
+          // Only if a previous run left a comment do we update it to "resolved",
+          // so a stale report never lingers on the PR.
+          if (active.length === 0) {
+            if (existing) {
+              await github.rest.issues.updateComment({
+                ...context.repo, comment_id: existing.id,
+                body: `${marker}\n**hookdrift:** previously reported drift is resolved - no findings on the latest run.`,
+              });
+            }
+            return;
+          }
+
+          const icon = { BREAKING: '🔴', WARNING: '🟡', INFO: '🔵' };
+          const counts = { BREAKING: 0, WARNING: 0, INFO: 0 };
+          let body = `${marker}\n### hookdrift: webhook contract drift\n\n`;
+          let lastEvent = '';
+          for (const f of active) {
+            counts[f.severity]++;
+            const key = `${f.provider}/${f.event}`;
+            if (key !== lastEvent) { body += `**\`${key}\`**\n`; lastEvent = key; }
+            body += `- ${icon[f.severity]} **${f.severity}** \`${f.path || '(event)'}\` - ${f.message}\n`;
+          }
+          const suppressed = findings.length - active.length;
+          body += `\n${counts.BREAKING} breaking, ${counts.WARNING} warning(s), ${counts.INFO} info` +
+                  (suppressed ? ` (${suppressed} suppressed by ignore rules)` : '') + '\n';
+          let impact = '';
+          try { impact = fs.readFileSync(path.join(process.env.RUNNER_TEMP, 'hookdrift-impact.txt'), 'utf8'); } catch {}
+          if (impact.trim()) {
+            body += `\n<details><summary>Code references (heuristic)</summary>\n\n\`\`\`\n${impact.trim()}\n\`\`\`\n\n</details>\n`;
+          }
+          if (body.length > 60000) body = body.slice(0, 60000) + '\n\n*(truncated)*';
+
+          if (existing) {
+            await github.rest.issues.updateComment({ ...context.repo, comment_id: existing.id, body });
+          } else {
+            await github.rest.issues.createComment({ ...context.repo, issue_number: context.issue.number, body });
+          }
+
+    - name: Propagate check exit code
+      shell: bash
+      run: exit ${{ steps.check.outputs.exit_code }}

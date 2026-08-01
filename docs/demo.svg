@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 400" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13">
+  <style>
+    .l { opacity: 0; animation: r .3s forwards; }
+    @keyframes r { to { opacity: 1; } }
+    .d0 { animation-delay: .3s } .d1 { animation-delay: 1.2s } .d2 { animation-delay: 1.5s }
+    .d3 { animation-delay: 1.8s } .d4 { animation-delay: 3.2s } .d5 { animation-delay: 4.2s }
+    .d6 { animation-delay: 4.5s } .d7 { animation-delay: 4.8s } .d8 { animation-delay: 5.1s }
+    .d9 { animation-delay: 5.4s } .d10 { animation-delay: 5.7s } .d11 { animation-delay: 6s }
+    .d12 { animation-delay: 6.6s } .d13 { animation-delay: 7s }
+    .p { fill: #7ee787 } .t { fill: #e6edf3 } .dim { fill: #8b949e }
+    .brk { fill: #ff7b72 } .wrn { fill: #e3b341 } .inf { fill: #79c0ff }
+  </style>
+  <rect width="760" height="400" rx="8" fill="#0d1117" stroke="#30363d"/>
+  <circle cx="22" cy="20" r="5" fill="#ff5f56"/><circle cx="40" cy="20" r="5" fill="#ffbd2e"/><circle cx="58" cy="20" r="5" fill="#27c93f"/>
+  <text x="20" y="56"  class="l d0"><tspan class="p">$</tspan><tspan class="t" dx="8">npx hookdrift infer ./fixtures</tspan></text>
+  <text x="20" y="78"  class="l d1 t">stripe/charge.succeeded: created (36 samples, 53 paths)</text>
+  <text x="20" y="98"  class="l d2 t">github/push: created (5 samples, 32 paths)</text>
+  <text x="20" y="118" class="l d3 dim">2 contract(s) in .hookdrift/ — commit them to git.</text>
+  <text x="20" y="156" class="l d4"><tspan class="p">$</tspan><tspan class="t" dx="8">npx hookdrift check ./fixtures  </tspan><tspan class="dim"># weeks later, new payloads saved</tspan></text>
+  <text x="20" y="178" class="l d5 t">stripe/charge.succeeded</text>
+  <text x="34" y="198" class="l d6"><tspan class="brk">BREAKING</tspan><tspan class="t" dx="10">data.object.amount_refunded  moved to data.object.totals.amount_refunded</tspan></text>
+  <text x="34" y="218" class="l d7"><tspan class="brk">BREAKING</tspan><tspan class="t" dx="10">data.object.paid  null observed (never null in 36 contract samples)</tspan></text>
+  <text x="34" y="238" class="l d8"><tspan class="wrn">WARNING</tspan><tspan class="t" dx="17">data.object.currency  new enum value(s): [chf] — switches will miss them</tspan></text>
+  <text x="34" y="258" class="l d9"><tspan class="wrn">WARNING</tspan><tspan class="t" dx="17">pending_webhooks  required → optional (36/36 → 8/10 samples)</tspan></text>
+  <text x="34" y="278" class="l d10"><tspan class="inf">INFO</tspan><tspan class="t" dx="42">data.object.balance_transaction  expandable field (ID string ↔ object) — not a break</tspan></text>
+  <text x="34" y="298" class="l d11"><tspan class="inf">INFO</tspan><tspan class="t" dx="42">data.object.totals  new field appeared in 10/10 new samples</tspan></text>
+  <text x="20" y="330" class="l d12 t">2 breaking, 5 warning(s), 2 info <tspan class="dim">(1 suppressed)</tspan></text>
+  <text x="20" y="362" class="l d13"><tspan class="dim">exit code 1 — your CI fails before production does</tspan></text>
+</svg>

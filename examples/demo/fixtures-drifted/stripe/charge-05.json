@@ -9,6 +9,7 @@
       "object": "charge",
       "amount": 1500,
       "amount_captured": 1500,
+      "balance_transaction": "txn_350d595adb5373934a5dfb4",
       "billing_details": {
         "address": {
           "city": "Paris",

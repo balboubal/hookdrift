@@ -10,6 +10,13 @@
       "eventPath": "@dirname"
     }
   },
-  "source": [],
-  "strict": false
+  "source": ["src/**/*.ts"],
+  "strict": false,
+  "ignore": [
+    {
+      "path": "data.object.calculated_statement_descriptor",
+      "kind": "new_field",
+      "reason": "announced in Stripe's changelog, handler does not read it"
+    }
+  ]
 }

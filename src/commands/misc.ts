@@ -36,12 +36,6 @@ export function runExplain(cwd: string, log: (l: string) => void = console.log):
   return 0;
 }
 
-export function runImpact(_cwd: string, log: (l: string) => void = console.log): number {
-  log("`hookdrift impact` is not implemented yet — it ships in the next release.");
-  log("It will map each finding from the last check to the source lines that read the changed path.");
-  return 0;
-}
-
 export function usage(log: (l: string) => void = console.log): number {
   log(`hookdrift — detect webhook payload drift before it breaks your handler
 
@@ -51,7 +45,9 @@ Usage:
       --rebuild                     replace contracts instead of merging (allows narrowing)
   hookdrift check [fixtures-dir]    diff samples against committed contracts
       --strict                      warnings also cause a non-zero exit
-  hookdrift impact                  map contract changes to code references
+      --json                        machine-readable findings on stdout
+      --show-suppressed             include findings silenced by ignore rules
+  hookdrift impact                  map last check's findings to code references
   hookdrift explain                 human-readable report of the last check
 
 Contracts live in .hookdrift/<provider>/<event>.contract.json — commit them.

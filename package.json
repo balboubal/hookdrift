@@ -28,7 +28,8 @@
     "ci"
   ],
   "dependencies": {
-    "tinyglobby": "^0.2.10"
+    "tinyglobby": "^0.2.10",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/node": "^20.14.0",

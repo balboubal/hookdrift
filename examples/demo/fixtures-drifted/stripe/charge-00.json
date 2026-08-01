@@ -9,6 +9,15 @@
       "object": "charge",
       "amount": 2250,
       "amount_captured": 2250.5,
+      "balance_transaction": {
+        "id": "txn_3ee845fadb72b05dfd164a0",
+        "object": "balance_transaction",
+        "amount": 2191,
+        "currency": "usd",
+        "fee": 59,
+        "net": 2132,
+        "status": "available"
+      },
       "billing_details": {
         "address": {
           "city": "Berlin",

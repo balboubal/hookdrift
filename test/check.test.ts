@@ -25,6 +25,7 @@ function writeConfig(strict = false) {
       providers: { stripe: { fixtures: "fixtures/**/*.json", eventPath: "type" } },
       source: [],
       strict,
+      minSamples: 1,
     }),
   );
 }

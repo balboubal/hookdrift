@@ -6,11 +6,14 @@ import { loadFixtures } from "../core/fixtures.js";
 import { observe } from "../core/observe.js";
 import { contractPath, loadContract } from "../core/contract.js";
 import { diffContract } from "../core/diff.js";
+import { matchIgnore } from "../core/ignore.js";
 
 export interface CheckOptions {
   cwd: string;
   fixturesDir?: string;
   strict?: boolean;
+  showSuppressed?: boolean;
+  json?: boolean;
   log?: (line: string) => void;
   now?: () => string;
 }
@@ -28,11 +31,21 @@ const COLORS: Record<string, string> = {
   INFO: "\x1b[36m",
 };
 const RESET = "\x1b[0m";
+const DIM = "\x1b[2m";
 const useColor = () => process.stdout.isTTY && !process.env.NO_COLOR;
 
 export function formatFinding(f: Finding, color: boolean): string {
-  const sev = color ? `${COLORS[f.severity]}${f.severity}${RESET}` : f.severity;
-  const lines = [`${sev.padEnd(color ? 18 : 9)} ${f.path}  ${f.message}`];
+  let sev: string = f.severity;
+  if (f.suppressed) {
+    sev = color ? `${DIM}${f.severity}${RESET}` : f.severity;
+  } else if (color) {
+    sev = `${COLORS[f.severity]}${f.severity}${RESET}`;
+  }
+  const pad = color ? 18 : 9;
+  const note = f.suppressed
+    ? `  [suppressed${f.suppressReason ? `: ${f.suppressReason}` : ""}]`
+    : "";
+  const lines = [`${sev.padEnd(pad)} ${f.path}  ${f.message}${note}`];
   if (f.refs?.length) {
     lines.push("          referenced in:");
     for (const r of f.refs) lines.push(`            ${r.file}:${r.line}`);
@@ -42,7 +55,9 @@ export function formatFinding(f: Finding, color: boolean): string {
 
 export function runCheck(opts: CheckOptions): number {
   const { cwd, fixturesDir } = opts;
-  const log = opts.log ?? console.log;
+  const json = opts.json ?? false;
+  // In --json mode stdout is the report; route incidental notes to stderr.
+  const log = opts.log ?? (json ? (l: string) => console.error(l) : console.log);
   const now = opts.now ?? (() => new Date().toISOString());
   const config = loadConfig(cwd);
   const strict = opts.strict ?? config.strict;
@@ -62,18 +77,32 @@ export function runCheck(opts: CheckOptions): number {
           path: "",
           severity: "INFO",
           kind: "uncontracted_event",
-          message: `${samples.length} sample(s) observed but no committed contract — run \`hookdrift infer\` to create one`,
+          message: `${samples.length} sample(s) observed but no committed contract - run \`hookdrift infer\` to create one`,
         });
         continue;
       }
       checked += 1;
-      findings.push(...diffContract(contract, observe(samples)));
+      findings.push(
+        ...diffContract(contract, observe(samples), { minSamples: config.minSamples }),
+      );
     }
   }
 
-  const breaking = findings.filter((f) => f.severity === "BREAKING").length;
-  const warning = findings.filter((f) => f.severity === "WARNING").length;
-  const info = findings.length - breaking - warning;
+  // Ignore rules apply after diffing: findings are flagged, never dropped, so
+  // last-run.json (and --json) always retain the full picture.
+  for (const f of findings) {
+    const rule = matchIgnore(config.ignore, f);
+    if (rule) {
+      f.suppressed = true;
+      if (rule.reason) f.suppressReason = rule.reason;
+    }
+  }
+
+  const active = findings.filter((f) => !f.suppressed);
+  const suppressed = findings.length - active.length;
+  const breaking = active.filter((f) => f.severity === "BREAKING").length;
+  const warning = active.filter((f) => f.severity === "WARNING").length;
+  const info = active.length - breaking - warning;
   const exitCode = breaking > 0 || (strict && warning > 0) ? 1 : 0;
 
   // Persist for `explain` and `impact`.
@@ -81,12 +110,19 @@ export function runCheck(opts: CheckOptions): number {
   const report: LastRun = { ranAt: now(), strict, exitCode, findings };
   writeFileSync(join(contractsDir, "last-run.json"), JSON.stringify(report, null, 2) + "\n", "utf8");
 
+  if (json) {
+    (opts.log ?? console.log)(JSON.stringify(report, null, 2));
+    return exitCode;
+  }
+
   const color = useColor();
-  if (findings.length === 0) {
-    log(`✓ ${checked} contract(s) checked — no drift detected.`);
+  const toShow = opts.showSuppressed ? findings : active;
+  if (toShow.length === 0) {
+    const supNote = suppressed > 0 ? ` (${suppressed} suppressed)` : "";
+    log(`OK ${checked} contract(s) checked - no unsuppressed drift${supNote}.`);
   } else {
     let lastEvent = "";
-    for (const f of findings) {
+    for (const f of toShow) {
       const key = `${f.provider}/${f.event}`;
       if (key !== lastEvent) {
         log(`\n${key}`);
@@ -94,9 +130,13 @@ export function runCheck(opts: CheckOptions): number {
       }
       log("  " + formatFinding(f, color).split("\n").join("\n  "));
     }
+    const supNote = suppressed > 0 ? ` (${suppressed} suppressed)` : "";
     log(
-      `\n${breaking} breaking, ${warning} warning(s), ${info} info across ${checked} contract(s)${strict ? " [strict]" : ""}`,
+      `\n${breaking} breaking, ${warning} warning(s), ${info} info${supNote} across ${checked} contract(s)${strict ? " [strict]" : ""}`,
     );
+    if (suppressed > 0 && !opts.showSuppressed) {
+      log(`Run with --show-suppressed to see suppressed findings.`);
+    }
   }
   return exitCode;
 }

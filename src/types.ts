@@ -15,6 +15,14 @@ export interface FieldSchema {
   /** Enum claim: distinct value set (strings only, ≤ 12 distinct across ≥ 30 observed values). */
   enum?: string[];
   enumConfidence?: number;
+  /**
+   * Field legitimately arrives in more than one shape (e.g. Stripe expandable
+   * fields: an ID string or the expanded object, controlled by the consumer's
+   * own request params). Type widening on such a field is INFO, narrowing is
+   * WARNING. Set automatically by infer when both shapes are observed and the
+   * strings are ID-like, or by hand in the contract file.
+   */
+  polymorphic?: boolean;
 }
 
 export interface Contract {
@@ -47,6 +55,8 @@ export interface PathStats {
   distinct: Set<string> | null;
   /** Intersection of format candidates across all observed values; null = no value seen yet. */
   formatCandidates: Set<string> | null;
+  /** Every observed string matched the ID-like pattern (meaningless if stringCount is 0). */
+  allIdLike: boolean;
   /** Every observed number was an integer. Meaningless until a number is seen. */
   intOnly: boolean;
   sawNumber: boolean;
@@ -91,6 +101,18 @@ export interface Finding {
   message: string;
   movedTo?: string;
   refs?: CodeRef[];
+  /** Matched an ignore rule. Suppressed findings are kept in last-run.json and counted, never dropped. */
+  suppressed?: boolean;
+  suppressReason?: string;
+}
+
+export interface IgnoreRule {
+  /** Dotted path; `*` (trailing) matches one segment, `**` (trailing) matches any depth. */
+  path: string;
+  /** If omitted, all finding kinds at the path are suppressed. */
+  kind?: FindingKind;
+  /** Purely documentary. */
+  reason?: string;
 }
 
 export interface HookdriftConfig {
@@ -98,4 +120,7 @@ export interface HookdriftConfig {
   providers: Record<string, { fixtures: string; eventPath: string }>;
   source: string[];
   strict: boolean;
+  /** Below this many new samples, presence-based findings are downgraded to INFO. */
+  minSamples: number;
+  ignore: IgnoreRule[];
 }

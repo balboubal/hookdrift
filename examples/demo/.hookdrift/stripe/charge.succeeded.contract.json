@@ -3,8 +3,8 @@
   "provider": "stripe",
   "event": "charge.succeeded",
   "samplesObserved": 36,
-  "firstSeen": "2026-07-31T03:28:55.452Z",
-  "lastUpdated": "2026-07-31T03:28:55.452Z",
+  "firstSeen": "2026-08-01T17:42:11.299Z",
+  "lastUpdated": "2026-08-01T17:42:11.299Z",
   "fields": {
     "api_version": {
       "types": [
@@ -62,7 +62,8 @@
       "types": [
         "string"
       ],
-      "presence": 1
+      "presence": 1,
+      "format": "prefixed_id"
     },
     "data.object.billing_details": {
       "types": [
@@ -143,7 +144,8 @@
       "types": [
         "string"
       ],
-      "presence": 1
+      "presence": 1,
+      "format": "prefixed_id"
     },
     "data.object.description": {
       "types": [
@@ -172,7 +174,8 @@
       "types": [
         "string"
       ],
-      "presence": 1
+      "presence": 1,
+      "format": "prefixed_id"
     },
     "data.object.livemode": {
       "types": [
@@ -257,13 +260,15 @@
       "types": [
         "string"
       ],
-      "presence": 1
+      "presence": 1,
+      "format": "prefixed_id"
     },
     "data.object.payment_method": {
       "types": [
         "string"
       ],
-      "presence": 1
+      "presence": 1,
+      "format": "prefixed_id"
     },
     "data.object.payment_method_details": {
       "types": [
@@ -351,7 +356,8 @@
       "types": [
         "string"
       ],
-      "presence": 1
+      "presence": 1,
+      "format": "prefixed_id"
     },
     "livemode": {
       "types": [
@@ -386,7 +392,8 @@
       "types": [
         "string"
       ],
-      "presence": 1
+      "presence": 1,
+      "format": "prefixed_id"
     },
     "request.idempotency_key": {
       "types": [],

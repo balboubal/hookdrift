@@ -47,6 +47,14 @@ export function runInfer(opts: InferOptions): number {
       log(
         `${provider}/${event}: ${verb} (${samples.length} new sample(s), ${contract.samplesObserved} total, ${Object.keys(contract.fields).length} paths)`,
       );
+      // Surface heuristic decisions - the user should see every inference made.
+      for (const [path, field] of Object.entries(contract.fields)) {
+        if (field.polymorphic && !existing?.fields[path]?.polymorphic) {
+          log(
+            `  note: ${path} marked polymorphic (observed as both ID string and object - expandable field)`,
+          );
+        }
+      }
     }
   }
 

@@ -9,6 +9,7 @@
       "object": "charge",
       "amount": 5250,
       "amount_captured": 5250,
+      "balance_transaction": "txn_3f0168473bd1ef1e98e2ecc",
       "billing_details": {
         "address": {
           "city": "Berlin",

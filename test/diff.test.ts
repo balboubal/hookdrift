@@ -6,9 +6,11 @@ import type { Finding } from "../src/types.js";
 
 const NOW = "2026-07-31T00:00:00.000Z";
 
+// Unit tests use tiny sample sets, so disable the minimum-sample guard here;
+// the guard itself is tested explicitly in session2.test.ts.
 function diff(oldSamples: unknown[], newSamples: unknown[]): Finding[] {
   const contract = buildContract("p", "e", observe(oldSamples), NOW);
-  return diffContract(contract, observe(newSamples));
+  return diffContract(contract, observe(newSamples), { minSamples: 1 });
 }
 
 const one = (fs: Finding[], kind: string) => {
@@ -56,20 +58,28 @@ describe("BREAKING", () => {
     expect(fs.filter((x) => x.kind === "new_field" && x.path === "totals.amount")).toHaveLength(0);
   });
 
-  it("enum value vanished with enumConfidence ≥ 0.9", () => {
-    const oldS = Array.from({ length: 60 }, (_, i) => ({ c: ["usd", "eur", "gbp"][i % 3] }));
-    const newS = Array.from({ length: 30 }, (_, i) => ({ c: ["usd", "eur"][i % 2] }));
+  it("enum value vanished with high confidence and >= 50 new values", () => {
+    // 3 distinct over 100 samples -> confidence 0.97; 60 new values >= 50.
+    const oldS = Array.from({ length: 100 }, (_, i) => ({ c: ["usd", "eur", "gbp"][i % 3] }));
+    const newS = Array.from({ length: 60 }, (_, i) => ({ c: ["usd", "eur"][i % 2] }));
     const f = one(diff(oldS, newS), "enum_value_removed");
     expect(f.severity).toBe("BREAKING");
     expect(f.message).toContain("gbp");
   });
 
-  it("enum value vanished with enumConfidence < 0.9 is NOT breaking", () => {
-    // A low-confidence enum: 10 distinct over 40 samples → confidence 0.75.
-    const oldS = Array.from({ length: 40 }, (_, i) => ({ c: `v${i % 10}` }));
-    const newS = Array.from({ length: 10 }, (_, i) => ({ c: `v${i % 9}` })); // v9 missing
-    const fs = diff(oldS, newS);
-    expect(fs.filter((f) => f.kind === "enum_value_removed")).toHaveLength(0);
+  it("enum value vanished below the confidence bar is WARNING, not breaking", () => {
+    // 3 distinct over 40 samples -> confidence 0.925 < 0.95.
+    const oldS = Array.from({ length: 40 }, (_, i) => ({ c: ["usd", "eur", "gbp"][i % 3] }));
+    const newS = Array.from({ length: 60 }, (_, i) => ({ c: ["usd", "eur"][i % 2] }));
+    const f = one(diff(oldS, newS), "enum_value_removed");
+    expect(f.severity).toBe("WARNING");
+  });
+
+  it("enum value vanished with < 50 new observed values is WARNING, not breaking", () => {
+    const oldS = Array.from({ length: 100 }, (_, i) => ({ c: ["usd", "eur", "gbp"][i % 3] }));
+    const newS = Array.from({ length: 30 }, (_, i) => ({ c: ["usd", "eur"][i % 2] }));
+    const f = one(diff(oldS, newS), "enum_value_removed");
+    expect(f.severity).toBe("WARNING");
   });
 
   it("array became scalar (and vice versa)", () => {
@@ -111,7 +121,7 @@ describe("WARNING", () => {
       "format_changed",
     );
     expect(f.severity).toBe("WARNING");
-    expect(f.message).toContain("iso8601 → numeric_string");
+    expect(f.message).toContain("iso8601 -> numeric_string");
   });
 
   it("numeric precision shift (integers only → floats)", () => {

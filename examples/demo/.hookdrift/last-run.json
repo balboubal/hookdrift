@@ -1,6 +1,6 @@
 {
-  "ranAt": "2026-07-31T03:29:02.441Z",
-  "strict": true,
+  "ranAt": "2026-08-01T17:45:27.063Z",
+  "strict": false,
   "exitCode": 1,
   "findings": [
     {
@@ -10,23 +10,14 @@
       "severity": "BREAKING",
       "kind": "path_moved",
       "movedTo": "data.object.totals.amount_refunded",
-      "message": "moved to data.object.totals.amount_refunded (was at data.object.amount_refunded in 36/36 contract samples; new location seen in 10/10 new samples)"
-    },
-    {
-      "provider": "stripe",
-      "event": "charge.succeeded",
-      "path": "data.object.balance_transaction",
-      "severity": "BREAKING",
-      "kind": "path_removed",
-      "message": "removed (was present in 36/36 contract samples; absent from all 10 new samples)"
-    },
-    {
-      "provider": "stripe",
-      "event": "charge.succeeded",
-      "path": "data.object.currency",
-      "severity": "BREAKING",
-      "kind": "enum_value_removed",
-      "message": "enum value(s) no longer observed: [gbp] (enumConfidence 0.9167; 10 values in 10 new samples)"
+      "message": "moved to data.object.totals.amount_refunded (was at data.object.amount_refunded in 36/36 contract samples; new location seen in 10/10 new samples)",
+      "refs": [
+        {
+          "file": "src/handler.ts",
+          "line": 4,
+          "score": 1
+        }
+      ]
     },
     {
       "provider": "stripe",
@@ -34,7 +25,14 @@
       "path": "data.object.paid",
       "severity": "BREAKING",
       "kind": "became_nullable",
-      "message": "null observed (1 null value(s) in 10 new samples; never null in 36 contract samples)"
+      "message": "null observed (1 null value(s) in 10 new samples; never null in 36 contract samples)",
+      "refs": [
+        {
+          "file": "src/handler.ts",
+          "line": 12,
+          "score": 1
+        }
+      ]
     },
     {
       "provider": "stripe",
@@ -50,7 +48,22 @@
       "path": "data.object.billing_details.email",
       "severity": "WARNING",
       "kind": "format_changed",
-      "message": "format changed: email → none (10 values in 10 new samples)"
+      "message": "format changed: email -> none (10 values in 10 new samples)"
+    },
+    {
+      "provider": "stripe",
+      "event": "charge.succeeded",
+      "path": "data.object.currency",
+      "severity": "WARNING",
+      "kind": "enum_value_removed",
+      "message": "enum value(s) no longer observed: [gbp] (enumConfidence 0.9167; 10 values in 10 new samples) - warning only: needs enumConfidence >= 0.95 and >= 50 observed values to be breaking",
+      "refs": [
+        {
+          "file": "src/handler.ts",
+          "line": 6,
+          "score": 1
+        }
+      ]
     },
     {
       "provider": "stripe",
@@ -58,7 +71,14 @@
       "path": "data.object.currency",
       "severity": "WARNING",
       "kind": "enum_value_added",
-      "message": "new enum value(s): [chf] — exhaustive switch/match statements over this field will miss them (10 values in 10 new samples)"
+      "message": "new enum value(s): [chf] - exhaustive switch/match statements over this field will miss them (10 values in 10 new samples)",
+      "refs": [
+        {
+          "file": "src/handler.ts",
+          "line": 6,
+          "score": 1
+        }
+      ]
     },
     {
       "provider": "stripe",
@@ -66,7 +86,22 @@
       "path": "pending_webhooks",
       "severity": "WARNING",
       "kind": "required_became_optional",
-      "message": "required → optional: present in 36/36 contract samples but only 8/10 new samples"
+      "message": "required -> optional: present in 36/36 contract samples but only 8/10 new samples",
+      "refs": [
+        {
+          "file": "src/handler.ts",
+          "line": 5,
+          "score": 1
+        }
+      ]
+    },
+    {
+      "provider": "stripe",
+      "event": "charge.succeeded",
+      "path": "data.object.balance_transaction",
+      "severity": "INFO",
+      "kind": "type_changed",
+      "message": "type changed (contract [string] -> observed [object, string] in 10/10 new samples) but this looks like an expandable field - string values are provider IDs. Re-run `hookdrift infer` to record it as polymorphic, or set \"polymorphic\": true in the contract"
     },
     {
       "provider": "stripe",
@@ -74,7 +109,9 @@
       "path": "data.object.calculated_statement_descriptor",
       "severity": "INFO",
       "kind": "new_field",
-      "message": "new field appeared in 10/10 new samples (not in contract of 36 samples)"
+      "message": "new field appeared in 10/10 new samples (not in contract of 36 samples)",
+      "suppressed": true,
+      "suppressReason": "announced in Stripe's changelog, handler does not read it"
     },
     {
       "provider": "stripe",

@@ -11,6 +11,8 @@ const UUID =
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const NUMERIC_STRING = /^-?\d+(\.\d+)?$/;
 const BASE64 = /^[A-Za-z0-9+/]+={0,2}$/;
+/** Provider object IDs like ch_3Abc…, txn_1Xyz… — the shape Stripe et al. use. */
+export const ID_LIKE = /^[a-z]{2,6}_[A-Za-z0-9]{8,}$/;
 
 /** Priority order used when more than one candidate survives intersection. */
 export const STRING_FORMAT_PRIORITY = [
@@ -18,6 +20,7 @@ export const STRING_FORMAT_PRIORITY = [
   "uuid",
   "email",
   "url",
+  "prefixed_id",
   "numeric_string",
   "base64",
 ] as const;
@@ -35,6 +38,7 @@ export function stringFormatCandidates(value: string): Set<string> {
       /* not a url */
     }
   }
+  if (ID_LIKE.test(value)) out.add("prefixed_id");
   if (NUMERIC_STRING.test(value)) out.add("numeric_string");
   // Base64 charset matches far too many ordinary strings; require padding or
   // the +/ characters plus realistic length before claiming.
