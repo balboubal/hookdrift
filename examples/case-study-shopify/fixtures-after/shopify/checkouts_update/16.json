@@ -14,7 +14,7 @@
   "closed_at": null,
   "phone": null,
   "source_name": "web",
-  "abandoned_checkout_url": "https://example-store.myshopify.com/checkouts/79f880da8ae52f55291b92695f744f7f",
+  "abandoned_checkout_url": "https://example-store.myshopify.invalid/checkouts/79f880da8ae52f55291b92695f744f7f",
   "total_price": "153.00",
   "subtotal_price": "153.00",
   "total_tax": "0.00",

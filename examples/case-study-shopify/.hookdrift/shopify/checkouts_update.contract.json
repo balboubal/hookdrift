@@ -3,8 +3,8 @@
   "provider": "shopify",
   "event": "checkouts_update",
   "samplesObserved": 24,
-  "firstSeen": "2026-08-02T17:14:44.183Z",
-  "lastUpdated": "2026-08-02T17:14:44.183Z",
+  "firstSeen": "2026-08-02T17:22:18.225Z",
+  "lastUpdated": "2026-08-02T17:22:18.225Z",
   "fields": {
     "abandoned_checkout_url": {
       "types": [

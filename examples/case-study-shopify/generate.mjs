@@ -50,7 +50,9 @@ function checkout(i, withId) {
     closed_at: null,
     phone: null,
     source_name: pick(r, ["web", "shopify_draft_order"]),
-    abandoned_checkout_url: `https://example-store.myshopify.com/checkouts/${hex(r, 32)}`,
+    // .invalid is RFC 2606 reserved and can never be registered. `.myshopify.com`
+    // is a live namespace, so any handle under it could belong to a real store.
+    abandoned_checkout_url: `https://example-store.myshopify.invalid/checkouts/${hex(r, 32)}`,
     total_price: price,
     subtotal_price: price,
     total_tax: "0.00",
