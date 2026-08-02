@@ -1,0 +1,60 @@
+{
+  "token": "18a8a1c575e97fec1ea53bdbea0ec781",
+  "cart_token": "f49933289ea8ff3116c7b4de278ef885",
+  "email": "customer18@example.invalid",
+  "gateway": null,
+  "buyer_accepts_marketing": true,
+  "created_at": "2026-04-11T02:00:00.000Z",
+  "updated_at": "2026-04-11T02:00:00.000Z",
+  "landing_site": "/",
+  "note": null,
+  "currency": "USD",
+  "presentment_currency": "USD",
+  "completed_at": null,
+  "closed_at": null,
+  "phone": null,
+  "source_name": "shopify_draft_order",
+  "abandoned_checkout_url": "https://example-store.myshopify.com/checkouts/91c8682f40261e20481a195c97e3c8f3",
+  "total_price": "46.00",
+  "subtotal_price": "46.00",
+  "total_tax": "0.00",
+  "total_discounts": "0.00",
+  "total_line_items_price": "46.00",
+  "line_items": [
+    {
+      "key": "0ae28ebd16adaf35",
+      "product_id": 8000000000018,
+      "variant_id": 4400000000018,
+      "sku": "SKU-1018",
+      "vendor": "Example Vendor",
+      "title": "Example Product 18",
+      "variant_title": "Small",
+      "quantity": 3,
+      "price": "46.00",
+      "grams": 779,
+      "requires_shipping": true,
+      "taxable": true,
+      "gift_card": false
+    }
+  ],
+  "customer": {
+    "id": 6000000000018,
+    "email": "customer18@example.invalid",
+    "first_name": "Example",
+    "last_name": "Customer",
+    "state": "disabled",
+    "currency": "USD",
+    "created_at": "2026-04-11T02:00:00.000Z"
+  },
+  "shipping_address": {
+    "first_name": "Example",
+    "last_name": "Customer",
+    "address1": "118 Example Street",
+    "city": "Austin",
+    "province": "Oregon",
+    "country": "United States",
+    "zip": "10126",
+    "phone": null,
+    "province_code": null
+  }
+}

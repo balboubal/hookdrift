@@ -1,0 +1,61 @@
+{
+  "id": 30000000131189,
+  "token": "8171b95b1fd1b361a73d996f7671fa90",
+  "cart_token": "3f5c972cc2af8252a231417577911bd2",
+  "email": "customer17@example.invalid",
+  "gateway": null,
+  "buyer_accepts_marketing": false,
+  "created_at": "2026-04-11T01:00:00.000Z",
+  "updated_at": "2026-04-11T01:00:00.000Z",
+  "landing_site": "/",
+  "note": null,
+  "currency": "USD",
+  "presentment_currency": "USD",
+  "completed_at": null,
+  "closed_at": null,
+  "phone": null,
+  "source_name": "web",
+  "abandoned_checkout_url": "https://example-store.myshopify.com/checkouts/9f8ad77268ca268bb927cc9e957c098a",
+  "total_price": "64.00",
+  "subtotal_price": "64.00",
+  "total_tax": "0.00",
+  "total_discounts": "0.00",
+  "total_line_items_price": "64.00",
+  "line_items": [
+    {
+      "key": "fbdbdb8aaf430627",
+      "product_id": 8000000000017,
+      "variant_id": 4400000000017,
+      "sku": "SKU-1017",
+      "vendor": "Example Vendor",
+      "title": "Example Product 17",
+      "variant_title": "Medium",
+      "quantity": 3,
+      "price": "64.00",
+      "grams": 985,
+      "requires_shipping": true,
+      "taxable": true,
+      "gift_card": false
+    }
+  ],
+  "customer": {
+    "id": 6000000000017,
+    "email": "customer17@example.invalid",
+    "first_name": "Example",
+    "last_name": "Customer",
+    "state": "disabled",
+    "currency": "USD",
+    "created_at": "2026-04-11T01:00:00.000Z"
+  },
+  "shipping_address": {
+    "first_name": "Example",
+    "last_name": "Customer",
+    "address1": "117 Example Street",
+    "city": "Portland",
+    "province": "Oregon",
+    "country": "United States",
+    "zip": "10119",
+    "phone": null,
+    "province_code": null
+  }
+}

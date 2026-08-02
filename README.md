@@ -10,6 +10,8 @@ hookdrift infers a structural contract from webhook payloads on disk, commits it
 
 <sub>The demo above is an animated SVG (SMIL `<animate>`, no `<style>` dependency, so it degrades to a readable static frame anywhere animation is stripped). Output is copied from a real run against [`examples/demo`](examples/demo).</sub>
 
+**Case study:** [a field disappeared from Shopify webhooks for two days and every monitor stayed green](docs/case-study-shopify-april-2026.md) — a real, resolved incident, with a runnable reproduction.
+
 ## Quickstart
 
 ```bash

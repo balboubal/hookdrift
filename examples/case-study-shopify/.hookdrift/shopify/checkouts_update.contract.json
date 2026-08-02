@@ -1,0 +1,352 @@
+{
+  "version": 1,
+  "provider": "shopify",
+  "event": "checkouts_update",
+  "samplesObserved": 24,
+  "firstSeen": "2026-08-02T17:14:44.183Z",
+  "lastUpdated": "2026-08-02T17:14:44.183Z",
+  "fields": {
+    "abandoned_checkout_url": {
+      "types": [
+        "string"
+      ],
+      "presence": 1,
+      "format": "url"
+    },
+    "buyer_accepts_marketing": {
+      "types": [
+        "boolean"
+      ],
+      "presence": 1
+    },
+    "cart_token": {
+      "types": [
+        "string"
+      ],
+      "presence": 1
+    },
+    "closed_at": {
+      "types": [],
+      "presence": 1,
+      "nullable": true
+    },
+    "completed_at": {
+      "types": [],
+      "presence": 1,
+      "nullable": true
+    },
+    "created_at": {
+      "types": [
+        "string"
+      ],
+      "presence": 1,
+      "format": "iso8601"
+    },
+    "currency": {
+      "types": [
+        "string"
+      ],
+      "presence": 1
+    },
+    "customer": {
+      "types": [
+        "object"
+      ],
+      "presence": 1
+    },
+    "customer.created_at": {
+      "types": [
+        "string"
+      ],
+      "presence": 1,
+      "format": "iso8601"
+    },
+    "customer.currency": {
+      "types": [
+        "string"
+      ],
+      "presence": 1
+    },
+    "customer.email": {
+      "types": [
+        "string"
+      ],
+      "presence": 1,
+      "format": "email"
+    },
+    "customer.first_name": {
+      "types": [
+        "string"
+      ],
+      "presence": 1
+    },
+    "customer.id": {
+      "types": [
+        "number"
+      ],
+      "presence": 1,
+      "intOnly": true
+    },
+    "customer.last_name": {
+      "types": [
+        "string"
+      ],
+      "presence": 1
+    },
+    "customer.state": {
+      "types": [
+        "string"
+      ],
+      "presence": 1
+    },
+    "email": {
+      "types": [
+        "string"
+      ],
+      "presence": 1,
+      "format": "email"
+    },
+    "gateway": {
+      "types": [],
+      "presence": 1,
+      "nullable": true
+    },
+    "id": {
+      "types": [
+        "number"
+      ],
+      "presence": 1,
+      "intOnly": true
+    },
+    "landing_site": {
+      "types": [
+        "string"
+      ],
+      "presence": 1
+    },
+    "line_items": {
+      "types": [
+        "array"
+      ],
+      "presence": 1
+    },
+    "line_items[]": {
+      "types": [
+        "object"
+      ],
+      "presence": 1
+    },
+    "line_items[].gift_card": {
+      "types": [
+        "boolean"
+      ],
+      "presence": 1
+    },
+    "line_items[].grams": {
+      "types": [
+        "number"
+      ],
+      "presence": 1,
+      "intOnly": true
+    },
+    "line_items[].key": {
+      "types": [
+        "string"
+      ],
+      "presence": 1
+    },
+    "line_items[].price": {
+      "types": [
+        "string"
+      ],
+      "presence": 1,
+      "format": "numeric_string"
+    },
+    "line_items[].product_id": {
+      "types": [
+        "number"
+      ],
+      "presence": 1,
+      "intOnly": true
+    },
+    "line_items[].quantity": {
+      "types": [
+        "number"
+      ],
+      "presence": 1,
+      "intOnly": true
+    },
+    "line_items[].requires_shipping": {
+      "types": [
+        "boolean"
+      ],
+      "presence": 1
+    },
+    "line_items[].sku": {
+      "types": [
+        "string"
+      ],
+      "presence": 1
+    },
+    "line_items[].taxable": {
+      "types": [
+        "boolean"
+      ],
+      "presence": 1
+    },
+    "line_items[].title": {
+      "types": [
+        "string"
+      ],
+      "presence": 1
+    },
+    "line_items[].variant_id": {
+      "types": [
+        "number"
+      ],
+      "presence": 1,
+      "intOnly": true
+    },
+    "line_items[].variant_title": {
+      "types": [
+        "string"
+      ],
+      "presence": 1
+    },
+    "line_items[].vendor": {
+      "types": [
+        "string"
+      ],
+      "presence": 1
+    },
+    "note": {
+      "types": [],
+      "presence": 1,
+      "nullable": true
+    },
+    "phone": {
+      "types": [],
+      "presence": 1,
+      "nullable": true
+    },
+    "presentment_currency": {
+      "types": [
+        "string"
+      ],
+      "presence": 1
+    },
+    "shipping_address": {
+      "types": [
+        "object"
+      ],
+      "presence": 1
+    },
+    "shipping_address.address1": {
+      "types": [
+        "string"
+      ],
+      "presence": 1
+    },
+    "shipping_address.city": {
+      "types": [
+        "string"
+      ],
+      "presence": 1
+    },
+    "shipping_address.country": {
+      "types": [
+        "string"
+      ],
+      "presence": 1
+    },
+    "shipping_address.first_name": {
+      "types": [
+        "string"
+      ],
+      "presence": 1
+    },
+    "shipping_address.last_name": {
+      "types": [
+        "string"
+      ],
+      "presence": 1
+    },
+    "shipping_address.phone": {
+      "types": [],
+      "presence": 1,
+      "nullable": true
+    },
+    "shipping_address.province": {
+      "types": [
+        "string"
+      ],
+      "presence": 1
+    },
+    "shipping_address.province_code": {
+      "types": [],
+      "presence": 1,
+      "nullable": true
+    },
+    "shipping_address.zip": {
+      "types": [
+        "string"
+      ],
+      "presence": 1,
+      "format": "numeric_string"
+    },
+    "source_name": {
+      "types": [
+        "string"
+      ],
+      "presence": 1
+    },
+    "subtotal_price": {
+      "types": [
+        "string"
+      ],
+      "presence": 1,
+      "format": "numeric_string"
+    },
+    "token": {
+      "types": [
+        "string"
+      ],
+      "presence": 1
+    },
+    "total_discounts": {
+      "types": [
+        "string"
+      ],
+      "presence": 1,
+      "format": "numeric_string"
+    },
+    "total_line_items_price": {
+      "types": [
+        "string"
+      ],
+      "presence": 1,
+      "format": "numeric_string"
+    },
+    "total_price": {
+      "types": [
+        "string"
+      ],
+      "presence": 1,
+      "format": "numeric_string"
+    },
+    "total_tax": {
+      "types": [
+        "string"
+      ],
+      "presence": 1,
+      "format": "numeric_string"
+    },
+    "updated_at": {
+      "types": [
+        "string"
+      ],
+      "presence": 1,
+      "format": "iso8601"
+    }
+  }
+}

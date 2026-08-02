@@ -1,0 +1,61 @@
+{
+  "id": 30000000177491,
+  "token": "0f4e139b005f043dc357dd7b2713a19d",
+  "cart_token": "ef596dd853723c2fa94deb5c3c021d22",
+  "email": "customer23@example.invalid",
+  "gateway": null,
+  "buyer_accepts_marketing": false,
+  "created_at": "2026-04-11T07:00:00.000Z",
+  "updated_at": "2026-04-11T07:00:00.000Z",
+  "landing_site": "/",
+  "note": null,
+  "currency": "USD",
+  "presentment_currency": "USD",
+  "completed_at": null,
+  "closed_at": null,
+  "phone": null,
+  "source_name": "web",
+  "abandoned_checkout_url": "https://example-store.myshopify.com/checkouts/ded1964f1f22bcb17713ff89488c2a0f",
+  "total_price": "152.00",
+  "subtotal_price": "152.00",
+  "total_tax": "0.00",
+  "total_discounts": "0.00",
+  "total_line_items_price": "152.00",
+  "line_items": [
+    {
+      "key": "06a108c67bf4f894",
+      "product_id": 8000000000023,
+      "variant_id": 4400000000023,
+      "sku": "SKU-1023",
+      "vendor": "Example Vendor",
+      "title": "Example Product 23",
+      "variant_title": "Large",
+      "quantity": 2,
+      "price": "152.00",
+      "grams": 377,
+      "requires_shipping": true,
+      "taxable": true,
+      "gift_card": false
+    }
+  ],
+  "customer": {
+    "id": 6000000000023,
+    "email": "customer23@example.invalid",
+    "first_name": "Example",
+    "last_name": "Customer",
+    "state": "disabled",
+    "currency": "USD",
+    "created_at": "2026-04-11T07:00:00.000Z"
+  },
+  "shipping_address": {
+    "first_name": "Example",
+    "last_name": "Customer",
+    "address1": "123 Example Street",
+    "city": "Denver",
+    "province": "Oregon",
+    "country": "United States",
+    "zip": "10161",
+    "phone": null,
+    "province_code": null
+  }
+}
