@@ -6,7 +6,7 @@ dist/
 # Contracts are meant to be committed; last-run.json is not. It is transient
 # output rewritten with a fresh timestamp by every `check`, so committing it
 # means the working tree goes dirty just from running the tool.
-.hookdrift/last-run.json
+**/.hookdrift/last-run.json
 
 # Locally captured Stripe payloads. Real webhook captures can carry account
 # details (the Stripe account email appears in account.updated events), so the
