@@ -2,7 +2,9 @@
 
 **Detect when a third-party webhook payload changes shape — before it silently breaks your handler in production.**
 
-Stripe adds a field. Shopify makes one nullable. GitHub renames a nested object. Delivery still succeeds, you still return 200, and you find out days later from a customer. hookdrift infers a structural contract from your saved webhook payloads, commits it to git, and fails CI when new payloads stop matching it.
+You're moving to a new Stripe API version, or Shopify is moving you to one. A field is gone, a type changed, something is nullable now. Your handler doesn't error — delivery succeeds, you return 200, every monitor stays green — but your code reads a field that isn't there any more, and you find out days later from a customer.
+
+hookdrift infers a structural contract from webhook payloads on disk, commits it to git, and fails CI when new payloads stop matching it. For a version upgrade both payload sets exist *before you deploy*, because Stripe and Shopify will generate them for you on demand.
 
 ![hookdrift demo](docs/demo.svg)
 
@@ -25,6 +27,61 @@ npx hookdrift impact         # map findings to the code that reads those fields
 ```
 
 A provider changing their payload now shows up as a **reviewable diff in a pull request**, with severity attached and the consuming code lines listed.
+
+## The upgrade workflow
+
+This is the case hookdrift is strongest at, because you can get both sets of payloads **before anything ships** — the providers hand them to you.
+
+### Stripe
+
+Stripe's own [webhook versioning guide](https://docs.stripe.com/webhooks/versioning) recommends running two endpoints in parallel through an upgrade: the same URL distinguished by a query parameter, one pinned to your current `api_version` and one to the target. While both are enabled you are receiving each event in both shapes — that is two fixture sets straight from production traffic.
+
+You can get the same pair locally without touching production. In one terminal:
+
+```bash
+stripe listen --format json > current.jsonl
+```
+
+and, for the newest version:
+
+```bash
+stripe listen --latest --format json > target.jsonl
+```
+
+In a second terminal, `stripe trigger charge.succeeded` (and whichever other events you consume) to produce them. `--latest` is documented as "receive events used in the latest API version"; without it you get your account's default.
+
+> Stripe's docs still show `--print-json`. As of CLI 1.45 that flag is deprecated in favour of `--format json` — it still works but prints a deprecation notice.
+
+Split either capture into one file per event with [`examples/stripe-live/split-jsonl.mjs`](examples/stripe-live/split-jsonl.mjs).
+
+### Shopify
+
+Shopify's CLI generates a payload for whichever API version you name, before you deploy:
+
+```bash
+shopify app webhook trigger --topic orders/updated --api-version 2025-07 --address http://localhost:3000/webhooks
+shopify app webhook trigger --topic orders/updated --api-version 2026-01 --address http://localhost:3000/webhooks
+```
+
+Save what your endpoint receives into a folder per version. This matters more for Shopify than for Stripe, because Shopify's version deprecations are scheduled rather than optional — [2025-01 removed `tags`, `total_spent` and `orders_count`](https://shopify.dev/docs/api/release-notes/2025-01) from customer webhook payloads, for instance.
+
+### Then diff the two
+
+```bash
+npx hookdrift infer fixtures/current    # contract from the version you run today
+npx hookdrift check fixtures/target     # does the target version still match it?  exit 1 on breaking
+npx hookdrift impact                    # which of your code reads the fields that changed
+```
+
+You get the break list, with severity and the source lines touching each field, while the upgrade is still a branch.
+
+## Where fixtures come from
+
+hookdrift compares payloads that are already on disk, so it is exactly as current as your corpus. That cuts differently depending on the change:
+
+- **API version upgrades — strongest.** Both sets exist ahead of the deploy, generated on demand as above. Nothing reaches production before you have diffed it.
+- **Announced changes — strong.** The provider's changelog tells you something is coming; capture fresh samples and check them against the committed contract.
+- **Unannounced drift — weakest, and worth saying plainly.** A genuinely surprising change reaches production *before* it reaches your fixtures. hookdrift catches it on your next capture, which turns "days, reported by a customer" into "next CI run, with the affected code listed" — but it does not stop the first bad payload. No fixture-based tool can. If you need that, you need something in the delivery path, which is a different product.
 
 ## What it detects
 
@@ -90,7 +147,7 @@ Posts **one** PR comment, updated in place on re-runs. No findings → no commen
 
 ## Honest limitations
 
-- **Fixture-based.** v1 diffs saved payloads on disk; it is only as current as your fixtures. Capture them from your test webhooks, replay logs, or provider CLI (e.g. `stripe listen`).
+- **Fixture-based**, with the consequences spelled out in [Where fixtures come from](#where-fixtures-come-from) — it cannot catch a surprise change before that payload has reached you at least once.
 - **`impact` is textual matching**, not AST resolution. It will miss dynamic access (`payload[key]`) and can flag unrelated uses of common field names. Treat it as a ranked starting point.
 - **Inference needs volume.** Enums require ≥ 30 observations; presence ratios stabilize with sample count. `infer` merges new samples and only ever widens — narrowing requires an explicit `--rebuild`.
 
