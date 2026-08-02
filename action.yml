@@ -65,21 +65,39 @@ runs:
 
           const icon = { BREAKING: '🔴', WARNING: '🟡', INFO: '🔵' };
           const counts = { BREAKING: 0, WARNING: 0, INFO: 0 };
+          for (const f of active) counts[f.severity]++;
+
+          // Only BREAKING and WARNING are listed. A real capture can produce
+          // hundreds of INFO findings, and a wall of text is what trains people
+          // to collapse the comment unread - which is exactly how the one
+          // genuine breaking change gets missed. INFO is summarised instead;
+          // the full set is always in --json and .hookdrift/last-run.json.
+          const listed = active.filter(f => f.severity !== 'INFO');
           let body = `${marker}\n### hookdrift: webhook contract drift\n\n`;
           let lastEvent = '';
-          for (const f of active) {
-            counts[f.severity]++;
+          for (const f of listed) {
             const key = `${f.provider}/${f.event}`;
             if (key !== lastEvent) { body += `**\`${key}\`**\n`; lastEvent = key; }
             body += `- ${icon[f.severity]} **${f.severity}** \`${f.path || '(event)'}\` - ${f.message}\n`;
           }
+          if (listed.length === 0) {
+            body += `No breaking or warning findings.\n`;
+          }
           const suppressed = findings.length - active.length;
           body += `\n${counts.BREAKING} breaking, ${counts.WARNING} warning(s), ${counts.INFO} info` +
                   (suppressed ? ` (${suppressed} suppressed by ignore rules)` : '') + '\n';
+
           let impact = '';
           try { impact = fs.readFileSync(path.join(process.env.RUNNER_TEMP, 'hookdrift-impact.txt'), 'utf8'); } catch {}
-          if (impact.trim()) {
-            body += `\n<details><summary>Code references (heuristic)</summary>\n\n\`\`\`\n${impact.trim()}\n\`\`\`\n\n</details>\n`;
+          if (counts.INFO > 0 || impact.trim()) {
+            body += `\n<details><summary>Details</summary>\n\n`;
+            if (counts.INFO > 0) {
+              body += `${counts.INFO} informational finding(s) - run \`hookdrift check\` locally to see them.\n\n`;
+            }
+            if (impact.trim()) {
+              body += `Code references (heuristic):\n\n\`\`\`\n${impact.trim()}\n\`\`\`\n\n`;
+            }
+            body += `</details>\n`;
           }
           if (body.length > 60000) body = body.slice(0, 60000) + '\n\n*(truncated)*';
 
