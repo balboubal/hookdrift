@@ -36,7 +36,10 @@ export function loadFixtures(
   for (const file of files) {
     let payload: unknown;
     try {
-      payload = JSON.parse(readFileSync(file, "utf8"));
+      // Strip a UTF-8 BOM. Payloads captured on Windows routinely carry one -
+      // PowerShell redirection adds it, so `stripe listen > events.jsonl`
+      // produces files that would otherwise be skipped as invalid JSON.
+      payload = JSON.parse(readFileSync(file, "utf8").replace(/^\uFEFF/, ""));
     } catch (e) {
       skipped.push({ file, reason: `invalid JSON (${(e as Error).message})` });
       continue;

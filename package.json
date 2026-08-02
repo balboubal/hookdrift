@@ -1,9 +1,9 @@
 {
   "name": "hookdrift",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Detect when a third-party webhook payload changes shape — before it silently breaks your handler.",
   "license": "MIT",
-  "author": "balboubal",
+  "author": "amutsu",
   "homepage": "https://github.com/balboubal/hookdrift#readme",
   "repository": {
     "type": "git",

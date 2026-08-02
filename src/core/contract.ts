@@ -173,7 +173,9 @@ export function contractPath(contractsDir: string, provider: string, event: stri
 
 export function loadContract(file: string): Contract | null {
   if (!existsSync(file)) return null;
-  return JSON.parse(readFileSync(file, "utf8")) as Contract;
+  // Strip a UTF-8 BOM - a committed contract may have been touched by an editor
+  // that adds one.
+  return JSON.parse(readFileSync(file, "utf8").replace(/^\uFEFF/, "")) as Contract;
 }
 
 export function saveContract(file: string, contract: Contract): void {

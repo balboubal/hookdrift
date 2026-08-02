@@ -68,7 +68,9 @@ export function loadConfig(cwd: string): HookdriftConfig {
   }
   let raw: unknown;
   try {
-    raw = JSON.parse(readFileSync(file, "utf8"));
+    // Strip a UTF-8 BOM: editors and PowerShell redirection on Windows add one,
+    // and JSON.parse rejects it.
+    raw = JSON.parse(readFileSync(file, "utf8").replace(/^\uFEFF/, ""));
   } catch (e) {
     throw new Error(`${CONFIG_FILE} is not valid JSON: ${(e as Error).message}`);
   }
