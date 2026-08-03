@@ -1,5 +1,6 @@
 import { writeFileSync, mkdirSync } from "node:fs";
-import { join } from "node:path";
+import { join, relative, resolve } from "node:path";
+import { globSync } from "tinyglobby";
 import type { Finding } from "../types.js";
 import { loadConfig } from "../core/config.js";
 import { loadFixtures } from "../core/fixtures.js";
@@ -63,12 +64,14 @@ export function runCheck(opts: CheckOptions): number {
   const strict = opts.strict ?? config.strict;
   const contractsDir = join(cwd, config.contractsDir);
   const findings: Finding[] = [];
+  const exercised = new Set<string>();
   let checked = 0;
 
   for (const [provider, pc] of Object.entries(config.providers)) {
     const batch = loadFixtures(cwd, pc.fixtures, pc.eventPath, fixturesDir);
     for (const s of batch.skipped) log(`  skipped ${s.file}: ${s.reason}`);
     for (const [event, samples] of [...batch.events.entries()].sort()) {
+      exercised.add(resolve(contractPath(contractsDir, provider, event)));
       const contract = loadContract(contractPath(contractsDir, provider, event));
       if (!contract) {
         findings.push({
@@ -86,6 +89,23 @@ export function runCheck(opts: CheckOptions): number {
         ...diffContract(contract, observe(samples), { minSamples: config.minSamples }),
       );
     }
+  }
+
+  // A committed contract whose event produced no fixtures this run is not
+  // checked - and silence about that is how coverage decays invisibly (a
+  // capture pipeline that stops emitting one event type keeps CI green
+  // forever). Say so. A note rather than a failure, because partial runs
+  // against a fixtures subdirectory are legitimate.
+  const onDisk = globSync("*/*.contract.json", { cwd: contractsDir, absolute: true });
+  const unexercised = onDisk.filter((f) => !exercised.has(resolve(f)));
+  if (unexercised.length > 0) {
+    const names = unexercised
+      .slice(0, 5)
+      .map((f) => relative(contractsDir, f).replace(/\\/g, "/"))
+      .join(", ");
+    log(
+      `note: ${unexercised.length} committed contract(s) not exercised by this run (no matching fixtures): ${names}${unexercised.length > 5 ? ", ..." : ""}`,
+    );
   }
 
   // Ignore rules apply after diffing: findings are flagged, never dropped, so

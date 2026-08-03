@@ -100,6 +100,20 @@ describe("infer → check wiring and exit codes", () => {
     expect(runCheck({ cwd, log: quiet, now })).toBe(0);
   });
 
+  it("names committed contracts that this run never exercised", () => {
+    writeConfig();
+    writeFixtures("a", "charge.succeeded", [{ amount: 100 }]);
+    writeFixtures("b", "charge.refunded", [{ amount: 100 }]);
+    runInfer({ cwd, log: quiet, now }); // two contracts on disk
+    rmSync(join(cwd, "fixtures"), { recursive: true });
+    writeFixtures("a", "charge.succeeded", [{ amount: 100 }]); // refunded dries up
+    const lines: string[] = [];
+    expect(runCheck({ cwd, log: (l) => lines.push(l), now })).toBe(0); // note, not failure
+    const out = lines.join("\n");
+    expect(out).toContain("not exercised by this run");
+    expect(out).toContain("charge.refunded.contract.json");
+  });
+
   it("infer merge on second run never narrows; --rebuild replaces", () => {
     writeConfig();
     writeFixtures("stripe", "charge.succeeded", [{ amount: 100 }, { amount: "oops" }]);
