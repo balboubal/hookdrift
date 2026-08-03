@@ -103,7 +103,13 @@ export function runCheck(opts: CheckOptions): number {
   const breaking = active.filter((f) => f.severity === "BREAKING").length;
   const warning = active.filter((f) => f.severity === "WARNING").length;
   const info = active.length - breaking - warning;
-  const exitCode = breaking > 0 || (strict && warning > 0) ? 1 : 0;
+  // Zero contracts checked AND zero findings means the fixtures globs matched
+  // nothing at all - a typo'd path, not a healthy run. "No drift" would be
+  // the silent-failure lie this tool exists to prevent, so fail loudly.
+  // (Fixtures without contracts still produce uncontracted_event findings and
+  // exit 0, so a first run before `infer` is unaffected.)
+  const nothingMatched = checked === 0 && findings.length === 0;
+  const exitCode = nothingMatched || breaking > 0 || (strict && warning > 0) ? 1 : 0;
 
   // Persist for `explain` and `impact`.
   mkdirSync(contractsDir, { recursive: true });
@@ -117,7 +123,11 @@ export function runCheck(opts: CheckOptions): number {
 
   const color = useColor();
   const toShow = opts.showSuppressed ? findings : active;
-  if (toShow.length === 0) {
+  if (nothingMatched) {
+    log(
+      `No contracts checked and no fixtures matched - check the fixtures globs in hookdrift.config.json.`,
+    );
+  } else if (toShow.length === 0) {
     const supNote = suppressed > 0 ? ` (${suppressed} suppressed)` : "";
     log(`OK ${checked} contract(s) checked - no unsuppressed drift${supNote}.`);
   } else {

@@ -74,6 +74,15 @@ describe("infer → check wiring and exit codes", () => {
     expect(runCheck({ cwd, log: quiet, now })).toBe(1);
   });
 
+  it("exits 1 when the fixtures glob matches nothing at all", () => {
+    // A typo'd glob used to print "OK 0 contract(s) checked" and exit 0 -
+    // drift detection silently off in CI forever.
+    writeConfig();
+    const lines: string[] = [];
+    expect(runCheck({ cwd, log: (l) => lines.push(l), now })).toBe(1);
+    expect(lines.join("\n")).toContain("no fixtures matched");
+  });
+
   it("uncontracted events are INFO, exit 0", () => {
     writeConfig();
     writeFixtures("stripe", "charge.succeeded", [{ amount: 100 }]);
