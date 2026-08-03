@@ -29,6 +29,11 @@ interface Matcher {
  */
 function buildMatchers(segs: string[]): Matcher[] {
   const n = segs.length;
+  // Some legitimate paths reduce to zero searchable segments - an array-root
+  // payload's "[]" element path, or a literal key made of dots. Nothing
+  // textual can be searched for; the finding is still printed, just with no
+  // code references, instead of crashing on segs[-1].
+  if (n === 0) return [];
   const out: Matcher[] = [];
   for (let k = n; k >= 2; k--) {
     const chain = segs.slice(-k).map(esc).join("\\??\\.");
@@ -67,6 +72,11 @@ export function runImpact(
     log("Last check produced no unsuppressed findings - nothing to map.");
     return 0;
   }
+
+  // Findings loaded from last-run.json may already carry refs from a previous
+  // impact run; the file is rewritten below, so without this reset every rerun
+  // appended duplicates until the ref cap evicted genuine references.
+  for (const f of targets) delete f.refs;
 
   const files = canSearch
     ? [...new Set(config.source.flatMap((g) => globSync(g, { cwd, absolute: true })))].sort()

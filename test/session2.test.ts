@@ -549,6 +549,40 @@ describe("impact (heuristic code mapping)", () => {
     expect(runImpact(cwd, quiet)).toBe(1);
   });
 
+  it("REGRESSION: does not crash on findings whose path has no searchable segments", () => {
+    // Array-root payloads (SendGrid-style event batches) produce the element
+    // path "[]"; impact used to crash with "Cannot read properties of
+    // undefined (reading 'replace')" on it.
+    writeConfig({
+      source: ["src/**/*.js"],
+      providers: { p: { fixtures: "fx/**/*.json", eventPath: "@dirname" } },
+    });
+    mkdirSync(join(cwd, "fx", "evt"), { recursive: true });
+    writeFileSync(join(cwd, "fx", "evt", "a.json"), "[1,2]");
+    runInfer({ cwd, log: quiet, now });
+    writeFileSync(join(cwd, "fx", "evt", "a.json"), "[true]");
+    expect(runCheck({ cwd, log: quiet, now })).toBe(1);
+    const lines: string[] = [];
+    expect(runImpact(cwd, (l) => lines.push(l))).toBe(1); // breaking gates, no crash
+    expect(lines.join("\n")).toContain("[]");
+  });
+
+  it("REGRESSION: running impact twice does not duplicate refs in last-run.json", () => {
+    writeConfig({ source: ["src/**/*.js"] });
+    mkdirSync(join(cwd, "src"), { recursive: true });
+    writeFileSync(join(cwd, "src", "h.js"), "const x = payload.amount;\n");
+    writeFx("a.json", { amount: 1 });
+    runInfer({ cwd, log: quiet, now });
+    rmSync(join(cwd, "fx"), { recursive: true });
+    writeFx("a.json", { amount: "s" });
+    runCheck({ cwd, log: quiet, now });
+    runImpact(cwd, quiet);
+    const refs1 = lastRun().findings.find((f) => f.path === "amount")!.refs!.length;
+    runImpact(cwd, quiet);
+    const refs2 = lastRun().findings.find((f) => f.path === "amount")!.refs!.length;
+    expect(refs2).toBe(refs1); // used to grow every run until the cap evicted genuine refs
+  });
+
   it("reports when nothing matches", () => {
     writeConfig({ source: ["src/**/*.ts"] });
     writeFx("a.json", { zorbltrax: 1, keep: 1 });
