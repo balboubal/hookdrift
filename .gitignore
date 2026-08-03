@@ -3,6 +3,9 @@ dist/
 *.tsbuildinfo
 .DS_Store
 
+# Local working notes - parked findings/suggestions, not part of the project.
+NOTES.local.md
+
 # Contracts are meant to be committed; last-run.json is not. It is transient
 # output rewritten with a fresh timestamp by every `check`, so committing it
 # means the working tree goes dirty just from running the tool.
