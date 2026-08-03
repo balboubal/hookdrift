@@ -142,6 +142,25 @@ describe("polymorphic fields (expandable-field handling)", () => {
     expect(fs.some((x) => x.severity === "BREAKING")).toBe(false);
   });
 
+  it("REGRESSION: a type OUTSIDE the pair on a polymorphic field is BREAKING, never INFO", () => {
+    // The annotation blesses string<->object. A number arriving breaks both
+    // consumer idioms (bt.startsWith on strings, bt.amount on objects), and
+    // before this fix it was INFO - invisible even under --strict.
+    const c = buildContract("p", "e", observe([{ bt: idStr }, { bt: expanded }]), NOW);
+    expect(c.fields["bt"]!.polymorphic).toBe(true);
+    const fs = diffContract(c, observe([{ bt: 12345 }, { bt: idStr }]), { minSamples: 1 });
+    const f = fs.find((x) => x.path === "bt" && x.kind === "type_changed")!;
+    expect(f.severity).toBe("BREAKING");
+    expect(f.severity).not.toBe("INFO");
+  });
+
+  it("widening WITHIN the pair on an annotated polymorphic field stays INFO", () => {
+    const c = buildContract("p", "e", observe([{ bt: idStr }]), NOW);
+    c.fields["bt"]!.polymorphic = true;
+    const fs = diffContract(c, observe([{ bt: expanded }]), { minSamples: 1 });
+    expect(fs.find((x) => x.path === "bt")!.severity).toBe("INFO");
+  });
+
   it("narrowing on a polymorphic field is WARNING", () => {
     const c = buildContract("p", "e", observe([{ bt: idStr }, { bt: expanded }]), NOW);
     expect(c.fields["bt"]!.polymorphic).toBe(true);

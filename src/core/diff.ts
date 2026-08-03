@@ -255,7 +255,12 @@ export function diffContract(
           message: `was null in all ${nullSamples} contract sample(s) and now carries a value of type ${[...stats.types].join(" | ")} (${stats.valueCount} non-null value(s) in ${N} new samples) - code branching on null may behave differently`,
         });
         typeChangeRoots.add(path);
-      } else if (field.polymorphic) {
+      } else if (field.polymorphic && extra.every((t) => t === "string" || t === "object")) {
+        // The polymorphic annotation blesses exactly the string/object
+        // expandable pair. A widening WITHIN that pair is informational; a
+        // number, boolean or array arriving on a polymorphic field is an
+        // ordinary incompatible change and falls through to BREAKING below -
+        // the annotation must not become a blanket severity waiver.
         add({
           path,
           severity: "INFO",
