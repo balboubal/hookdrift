@@ -93,6 +93,8 @@ hookdrift compares payloads that are already on disk, so it is exactly as curren
 | **WARNING** | required field becomes optional; **new enum value appears** (breaks exhaustive `switch`es — the classic silent failure); string format changes; integers-only field starts sending floats | 0 (1 with `--strict`) |
 | **INFO** | new optional field; presence ratio shifts; type widening on polymorphic/expandable fields | 0 |
 
+`check` also exits 1 when its fixtures globs match nothing at all — a run that checked nothing is a failure, not a pass, and `explain`/`impact` mirror that state rather than reporting health.
+
 False-positive control is a design goal, not an afterthought:
 
 - **Expandable fields** (Stripe-style: an ID string *or* the expanded object, depending on your own request params) are detected automatically and get `"polymorphic": true` in the contract. The evidence bar is deliberately strict: only *coexistence* — both shapes present in the same batch, strings all provider IDs — is treated as INFO, because coexistence is what proves both shapes are currently legitimate. If every payload flips to the other shape, that is a WARNING, not INFO: code reading the old shape breaks whether the cause was expansion being toggled or the provider genuinely replacing the field.
@@ -121,7 +123,8 @@ False-positive control is a design goal, not an afterthought:
   "minSamples": 10,                      // below this, presence findings are INFO
   "ignore": [
     {
-      "path": "data.object.metadata.**", // `*` = one segment, `**` = any depth
+      "path": "data.object.metadata.**", // wildcards are trailing-only: `*` = exactly one
+                                         // more segment, `**` = one or more
       "kind": "new_field",               // omit to suppress all kinds here
       "reason": "merchant-controlled free-form keys"
     }

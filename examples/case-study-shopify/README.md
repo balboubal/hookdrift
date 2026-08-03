@@ -9,16 +9,22 @@ Reproduces the shape change from [Webhooks sometimes sent with wrong API version
 ## Reproduce
 
 ```bash
+rm -rf .hookdrift                        # step 0: this repo ships the resulting contract for
+                                         # reading; infer MERGES into an existing contract by
+                                         # design, so reproducing the article's "created ...
+                                         # 24 total" needs a clean slate (PowerShell:
+                                         # Remove-Item -Recurse -Force .hookdrift)
 node generate.mjs                        # writes all three fixture batches
 
 npx hookdrift infer fixtures-before      # contract from payloads that all carry `id`
 npx hookdrift check fixtures-after       # the incident: id missing from 7 of 24  -> WARNING, exit 0
 npx hookdrift check fixtures-after --strict   # same finding, exit 1
 npx hookdrift check fixtures-total       # contrast: id missing from all 24       -> BREAKING, exit 1
+npx hookdrift check fixtures-after       # re-run so impact maps the incident, not the contrast
 npx hookdrift impact                     # maps the last check's findings to src/checkout-handler.js
 ```
 
-Run them in that order — `check` needs the contract from `infer`, and `impact` reads the findings the previous `check` wrote to `.hookdrift/last-run.json`.
+Run them in that order — `check` needs the contract from `infer`, and `impact` reads the findings the most recent `check` wrote to `.hookdrift/last-run.json` (hence re-running the `fixtures-after` check before it, to reproduce the article's impact block rather than the contrast batch's).
 
 ## The three batches
 
