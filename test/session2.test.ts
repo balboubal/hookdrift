@@ -474,7 +474,9 @@ describe("impact (heuristic code mapping)", () => {
 
     expect(runCheck({ cwd, log: quiet, now })).toBe(1);
     const lines: string[] = [];
-    expect(runImpact(cwd, (l) => lines.push(l))).toBe(0);
+    // impact mirrors check's exit semantics: the mapped findings include a
+    // BREAKING removal, so it exits 1 (it was unconditionally 0 before).
+    expect(runImpact(cwd, (l) => lines.push(l))).toBe(1);
     const out = lines.join("\n");
     expect(out).toContain("src/handler.ts:2");
     expect(out).toContain("textual matching, not AST analysis");
@@ -483,6 +485,31 @@ describe("impact (heuristic code mapping)", () => {
     expect(refs[0]).toMatchObject({ file: "src/handler.ts", line: 2, score: 1 });
     expect(refs.map((r) => r.line)).toEqual([2, 3, 4]);
     expect(refs[1]!.score).toBeGreaterThan(refs[2]!.score);
+  });
+
+  it("--strict exits 1 on warning-only findings; without the flag exits 0", () => {
+    writeConfig({ source: ["src/**/*.js"] });
+    writeFx("a.json", { amount: 1, opt: 1 });
+    writeFx("b.json", { amount: 1, opt: 1 });
+    runInfer({ cwd, log: quiet, now });
+    rmSync(join(cwd, "fx"), { recursive: true });
+    writeFx("a.json", { amount: 1, opt: 1 });
+    writeFx("b.json", { amount: 1 }); // required -> optional = WARNING
+    expect(runCheck({ cwd, log: quiet, now })).toBe(0);
+
+    expect(runImpact(cwd, quiet)).toBe(0);
+    expect(runImpact(cwd, quiet, true)).toBe(1);
+  });
+
+  it("exits 1 on breaking findings even without --strict, mirroring check", () => {
+    writeConfig({ source: ["src/**/*.js"] });
+    writeFx("a.json", { amount: 1 });
+    runInfer({ cwd, log: quiet, now });
+    rmSync(join(cwd, "fx"), { recursive: true });
+    writeFx("a.json", { amount: "boom" }); // type change = BREAKING
+    expect(runCheck({ cwd, log: quiet, now })).toBe(1);
+
+    expect(runImpact(cwd, quiet)).toBe(1);
   });
 
   it("reports when nothing matches", () => {

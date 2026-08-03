@@ -40,8 +40,14 @@ function buildMatchers(segs: string[]): Matcher[] {
   return out;
 }
 
-export function runImpact(cwd: string, log: (l: string) => void = console.log): number {
+export function runImpact(
+  cwd: string,
+  log: (l: string) => void = console.log,
+  strict?: boolean,
+): number {
   const config = loadConfig(cwd);
+  // Same resolution as check: explicit flag wins, config default otherwise.
+  const strictEff = strict ?? config.strict;
   const runFile = join(cwd, config.contractsDir, "last-run.json");
   if (!existsSync(runFile)) {
     log("No previous check found. Run `hookdrift check` first.");
@@ -105,7 +111,14 @@ export function runImpact(cwd: string, log: (l: string) => void = console.log): 
   }
   log(
     `\nSearched ${files.length} file(s). Note: this is textual matching, not AST analysis - ` +
-      `it will miss dynamic access (payload[key]) and may flag unrelated uses of common field names.`,
+      `it will miss dynamic access (payload[key]) and may flag unrelated uses of common field names.` +
+      (strictEff ? " [strict]" : ""),
   );
-  return 0;
+
+  // Exit semantics identical to check, over the same findings it just mapped:
+  // breaking always fails; warnings fail under strict.
+  const active = run.findings.filter((f) => !f.suppressed);
+  const breaking = active.filter((f) => f.severity === "BREAKING").length;
+  const warning = active.filter((f) => f.severity === "WARNING").length;
+  return breaking > 0 || (strictEff && warning > 0) ? 1 : 0;
 }

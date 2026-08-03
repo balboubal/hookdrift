@@ -129,7 +129,7 @@ False-positive control is a design goal, not an afterthought:
 }
 ```
 
-Commands: `init` · `infer [dir]` (`--rebuild` to allow narrowing) · `check [dir]` (`--strict`, `--json`, `--show-suppressed`) · `impact` · `explain`.
+Commands: `init` · `infer [dir]` (`--rebuild` to allow narrowing) · `check [dir]` (`--strict`, `--json`, `--show-suppressed`) · `impact` (`--strict`) · `explain`.
 
 ## GitHub Action
 

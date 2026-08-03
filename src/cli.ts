@@ -39,7 +39,7 @@ export function main(argv: string[], cwd: string): number {
           json: flags.has("--json"),
         });
       case "impact":
-        return runImpact(cwd);
+        return runImpact(cwd, undefined, flags.has("--strict") ? true : undefined);
       case "explain":
         return runExplain(cwd);
       case "--version":

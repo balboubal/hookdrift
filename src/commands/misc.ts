@@ -48,6 +48,7 @@ Usage:
       --json                        machine-readable findings on stdout
       --show-suppressed             include findings silenced by ignore rules
   hookdrift impact                  map last check's findings to code references
+      --strict                      warnings also cause a non-zero exit
   hookdrift explain                 human-readable report of the last check
   hookdrift --version               print the installed version
 
