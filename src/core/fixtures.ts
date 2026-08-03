@@ -1,6 +1,6 @@
-import { readFileSync } from "node:fs";
 import { basename, dirname, resolve, sep } from "node:path";
 import { globSync } from "tinyglobby";
+import { readTextFileSync } from "./read.js";
 
 export interface EventBatch {
   /** event name → parsed payloads */
@@ -36,10 +36,9 @@ export function loadFixtures(
   for (const file of files) {
     let payload: unknown;
     try {
-      // Strip a UTF-8 BOM. Payloads captured on Windows routinely carry one -
-      // PowerShell redirection adds it, so `stripe listen > events.jsonl`
-      // produces files that would otherwise be skipped as invalid JSON.
-      payload = JSON.parse(readFileSync(file, "utf8").replace(/^\uFEFF/, ""));
+      // BOM/encoding-tolerant read: PowerShell redirection produces UTF-16LE
+      // files and editors add UTF-8 BOMs - see readTextFileSync.
+      payload = JSON.parse(readTextFileSync(file));
     } catch (e) {
       skipped.push({ file, reason: `invalid JSON (${(e as Error).message})` });
       continue;

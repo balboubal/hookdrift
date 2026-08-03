@@ -114,6 +114,59 @@ describe("committed contract with a UTF-8 BOM", () => {
   });
 });
 
+describe("UTF-16 files, as PowerShell 5.1 redirection produces", () => {
+  // The README instructs `stripe listen --format json > current.jsonl`; on
+  // PowerShell 5.1 that writes UTF-16LE. Before this fix every such file was
+  // skipped with a misleading "invalid JSON (Unexpected token '�')" - loud,
+  // but blaming the JSON when the encoding was the problem.
+  const utf16le = (s: string) =>
+    Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from(s, "utf16le")]);
+  const utf16be = (s: string) => {
+    const le = Buffer.from(s, "utf16le");
+    le.swap16();
+    return Buffer.concat([Buffer.from([0xfe, 0xff]), le]);
+  };
+
+  it("UTF-16LE fixtures are parsed, not skipped as invalid JSON", () => {
+    writeConfig(false);
+    const d = join(cwd, "fx");
+    mkdirSync(d, { recursive: true });
+    writeFileSync(join(d, "0.json"), utf16le('{"type":"charge.succeeded","amount":100}'));
+    writeFileSync(join(d, "1.json"), utf16le('{"type":"charge.succeeded","amount":200}'));
+    const lines: string[] = [];
+    expect(runInfer({ cwd, log: (l) => lines.push(l), now })).toBe(0);
+    const out = lines.join("\n");
+    expect(out).not.toContain("skipped");
+    expect(out).toContain("2 new sample(s)");
+  });
+
+  it("UTF-16BE fixtures are parsed too", () => {
+    writeConfig(false);
+    const d = join(cwd, "fx");
+    mkdirSync(d, { recursive: true });
+    writeFileSync(join(d, "0.json"), utf16be('{"type":"charge.succeeded","amount":100}'));
+    const batch = loadFixtures(cwd, "fx/**/*.json", "type");
+    expect(batch.skipped).toEqual([]);
+    expect(batch.events.get("charge.succeeded")).toHaveLength(1);
+  });
+
+  it("a UTF-16LE config loads identically to the UTF-8 form", () => {
+    writeFileSync(
+      join(cwd, "hookdrift.config.json"),
+      utf16le(JSON.stringify(CONFIG)),
+    );
+    const c = loadConfig(cwd);
+    expect(c.providers.stripe!.fixtures).toBe("fx/**/*.json");
+  });
+
+  it("a UTF-16LE committed contract loads", () => {
+    const contract = buildContract("stripe", "charge.succeeded", observe([{ amount: 1 }]), NOW);
+    const file = join(cwd, "c.contract.json");
+    writeFileSync(file, utf16le(JSON.stringify(contract)));
+    expect(loadContract(file)).toEqual(contract);
+  });
+});
+
 describe("hookdrift never writes a BOM itself", () => {
   it("infer output is BOM-free", () => {
     writeConfig(false);

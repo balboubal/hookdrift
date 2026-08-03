@@ -1,6 +1,7 @@
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { z } from "zod";
+import { readTextFileSync } from "./read.js";
 import type { HookdriftConfig } from "../types.js";
 
 export const CONFIG_FILE = "hookdrift.config.json";
@@ -68,9 +69,8 @@ export function loadConfig(cwd: string): HookdriftConfig {
   }
   let raw: unknown;
   try {
-    // Strip a UTF-8 BOM: editors and PowerShell redirection on Windows add one,
-    // and JSON.parse rejects it.
-    raw = JSON.parse(readFileSync(file, "utf8").replace(/^\uFEFF/, ""));
+    // Encoding-tolerant read: UTF-8/UTF-16 BOMs from Windows tooling.
+    raw = JSON.parse(readTextFileSync(file));
   } catch (e) {
     throw new Error(`${CONFIG_FILE} is not valid JSON: ${(e as Error).message}`);
   }

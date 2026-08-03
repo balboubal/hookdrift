@@ -1,6 +1,7 @@
-import { mkdirSync, readFileSync, writeFileSync, existsSync } from "node:fs";
+import { mkdirSync, writeFileSync, existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { z } from "zod";
+import { readTextFileSync } from "./read.js";
 import type { Contract, FieldSchema, JsonType, Observation, PathStats } from "../types.js";
 import { pickFormat } from "./formats.js";
 import { ENUM_MAX_DISTINCT, ENUM_MIN_SAMPLES } from "./observe.js";
@@ -214,11 +215,11 @@ const ContractZ = z.looseObject({
 
 export function loadContract(file: string): Contract | null {
   if (!existsSync(file)) return null;
-  // Strip a UTF-8 BOM - a committed contract may have been touched by an editor
-  // that adds one.
+  // Encoding-tolerant read - a committed contract may have been re-saved by an
+  // editor with a UTF-8 BOM or piped through PowerShell as UTF-16.
   let parsed: unknown;
   try {
-    parsed = JSON.parse(readFileSync(file, "utf8").replace(/^\uFEFF/, ""));
+    parsed = JSON.parse(readTextFileSync(file));
   } catch (e) {
     throw new Error(`${file} is not valid JSON: ${(e as Error).message}`);
   }
