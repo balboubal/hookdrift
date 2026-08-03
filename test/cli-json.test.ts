@@ -54,6 +54,26 @@ function writeFixtures(payloads: object[]) {
   );
 }
 
+describe("help and version aliases through the compiled CLI", () => {
+  it("-h, --help and help all print usage and exit 0", () => {
+    for (const alias of ["-h", "--help", "help"]) {
+      const res = runCli([alias], cwd);
+      expect(res.status, alias).toBe(0);
+      expect(res.stdout, alias).toContain("hookdrift check");
+    }
+  });
+
+  it("-v, --version and version all print the package version and exit 0", () => {
+    const outputs = ["-v", "--version", "version"].map((alias) => {
+      const res = runCli([alias], cwd);
+      expect(res.status, alias).toBe(0);
+      return res.stdout.trim();
+    });
+    expect(new Set(outputs).size).toBe(1);
+    expect(outputs[0]).toMatch(/^\d+\.\d+\.\d+$/);
+  });
+});
+
 describe("check --json end-to-end through the compiled CLI", () => {
   it("emits a single valid JSON document with the findings array, exit 0 when nothing breaks", () => {
     writeFixtures([{ amount: 100 }, { amount: 200 }]);
