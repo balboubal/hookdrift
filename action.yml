@@ -50,6 +50,21 @@ runs:
           });
           const existing = comments.find(c => c.body && c.body.includes(marker));
 
+          // A failing check with no findings means it checked NOTHING (bad
+          // globs). Saying "resolved" there would tell the reviewer the exact
+          // opposite of what happened, while the job goes red - so report the
+          // real state instead.
+          if (active.length === 0 && report.exitCode !== 0) {
+            const body = `${marker}\n**hookdrift:** the check failed without checking anything - no fixtures matched. ` +
+              `Verify the \`fixtures\` globs in hookdrift.config.json. This is a configuration failure, not a clean run.`;
+            if (existing) {
+              await github.rest.issues.updateComment({ ...context.repo, comment_id: existing.id, body });
+            } else {
+              await github.rest.issues.createComment({ ...context.repo, issue_number: context.issue.number, body });
+            }
+            return;
+          }
+
           // Silence is the default: post nothing when there is nothing to say.
           // Only if a previous run left a comment do we update it to "resolved",
           // so a stale report never lingers on the PR.

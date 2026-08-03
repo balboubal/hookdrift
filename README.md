@@ -69,11 +69,23 @@ Save what your endpoint receives into a folder per version. This matters more fo
 
 ### Then diff the two
 
+First point the provider's `fixtures` glob at **both** directories, because the optional directory argument *filters* that glob rather than replacing it:
+
+```jsonc
+"providers": {
+  "stripe": { "fixtures": "fixtures-{current,target}/**/*.json", "eventPath": "type" }
+}
+```
+
+Then:
+
 ```bash
-npx hookdrift infer fixtures/current    # contract from the version you run today
-npx hookdrift check fixtures/target     # does the target version still match it?  exit 1 on breaking
+npx hookdrift infer fixtures-current    # contract from the version you run today
+npx hookdrift check fixtures-target     # does the target version still match it?  exit 1 on breaking
 npx hookdrift impact                    # which of your code reads the fields that changed
 ```
+
+(If the glob does not cover the directory you pass, you get `no fixtures matched` and exit 1 — the argument narrows, it never widens.)
 
 You get the break list, with severity and the source lines touching each field, while the upgrade is still a branch.
 
@@ -137,9 +149,10 @@ Commands: `init` · `infer [dir]` (`--rebuild` to allow narrowing) · `check [di
 ## GitHub Action
 
 ```yaml
-- uses: balboubal/hookdrift@v1
+- uses: balboubal/hookdrift@v0.1.2
   with:
     strict: false
+    version: "0.1.2" # pin the CLI too; the default is `latest`
 ```
 
 Posts **one** PR comment, updated in place on re-runs. No findings → no comment. If a previous run reported drift that is now resolved, the existing comment is updated to say so.
@@ -155,6 +168,7 @@ Posts **one** PR comment, updated in place on re-runs. No findings → no commen
 - **Fixture-based**, with the consequences spelled out in [Where fixtures come from](#where-fixtures-come-from) — it cannot catch a surprise change before that payload has reached you at least once.
 - **`impact` is textual matching**, not AST resolution. It will miss dynamic access (`payload[key]`) and can flag unrelated uses of common field names. Treat it as a ranked starting point.
 - **Inference needs volume.** Enums require ≥ 30 observations; presence ratios stabilize with sample count. `infer` merges new samples and only ever widens — narrowing requires an explicit `--rebuild`.
+- **`infer` merges by sample count, not by file identity.** Re-running it over the same unchanged corpus counts those payloads again, so `samplesObserved` grows (24 files → 24, then 48, then 72). Presence ratios stay proportionally right, but the evidence counts cited in findings will exceed the number of files on disk. Re-run `infer` when you capture *new* payloads; use `--rebuild` to reset to exactly what is on disk.
 
 ## Zero network calls
 
