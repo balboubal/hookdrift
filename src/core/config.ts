@@ -20,6 +20,7 @@ const FINDING_KINDS = [
   "new_field",
   "presence_shift",
   "uncontracted_event",
+  "invalid_contract",
 ] as const;
 
 const ConfigSchema = z
@@ -27,7 +28,10 @@ const ConfigSchema = z
     contractsDir: z.string().min(1).default(".hookdrift"),
     providers: z
       .record(
-        z.string(),
+        // A provider name becomes a directory under contractsDir; an empty one
+        // put contracts in the contractsDir root and produced a contract whose
+        // own validator then rejected it, wedging every command.
+        z.string().min(1, "provider name must not be empty"),
         z.object({
           fixtures: z.string().min(1),
           eventPath: z.string().min(1),

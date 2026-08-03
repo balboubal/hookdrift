@@ -72,7 +72,25 @@ export function runCheck(opts: CheckOptions): number {
     for (const s of batch.skipped) log(`  skipped ${s.file}: ${s.reason}`);
     for (const [event, samples] of [...batch.events.entries()].sort()) {
       exercised.add(resolve(contractPath(contractsDir, provider, event)));
-      const contract = loadContract(contractPath(contractsDir, provider, event));
+      // One unreadable contract must not abort the run: it used to throw out of
+      // runCheck, losing every finding from every other contract - including
+      // genuine BREAKING drift elsewhere - and leaving last-run.json stale so
+      // explain/impact then reported the previous run as current health.
+      // It is reported as its own BREAKING finding and the run continues.
+      let contract;
+      try {
+        contract = loadContract(contractPath(contractsDir, provider, event));
+      } catch (e) {
+        findings.push({
+          provider,
+          event,
+          path: "",
+          severity: "BREAKING",
+          kind: "invalid_contract",
+          message: `committed contract could not be read, so ${samples.length} sample(s) went unchecked: ${(e as Error).message.split("\n").join(" ")}`,
+        });
+        continue;
+      }
       if (!contract) {
         findings.push({
           provider,
@@ -137,6 +155,14 @@ export function runCheck(opts: CheckOptions): number {
   writeFileSync(join(contractsDir, "last-run.json"), JSON.stringify(report, null, 2) + "\n", "utf8");
 
   if (json) {
+    // The nothing-matched failure has no finding to carry it, so in --json mode
+    // it would otherwise reach CI as exit 1 with an empty findings array and no
+    // explanation anywhere. Diagnose on stderr, keeping stdout pure JSON.
+    if (nothingMatched) {
+      log(
+        `No contracts checked and no fixtures matched - check the fixtures globs in hookdrift.config.json.`,
+      );
+    }
     (opts.log ?? console.log)(JSON.stringify(report, null, 2));
     return exitCode;
   }

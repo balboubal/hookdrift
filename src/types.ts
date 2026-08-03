@@ -82,7 +82,8 @@ export type FindingKind =
   | "precision_shift"
   | "new_field"
   | "presence_shift"
-  | "uncontracted_event";
+  | "uncontracted_event"
+  | "invalid_contract";
 
 export interface CodeRef {
   file: string;

@@ -25,6 +25,7 @@ export function runInfer(opts: InferOptions): number {
   const config = loadConfig(cwd);
   const contractsDir = join(cwd, config.contractsDir);
   let wrote = 0;
+  let failed = 0;
 
   for (const [provider, pc] of Object.entries(config.providers)) {
     const batch = loadFixtures(cwd, pc.fixtures, pc.eventPath, fixturesDir);
@@ -36,7 +37,17 @@ export function runInfer(opts: InferOptions): number {
     for (const [event, samples] of [...batch.events.entries()].sort()) {
       const obs = observe(samples);
       const file = contractPath(contractsDir, provider, event);
-      const existing = rebuild ? null : loadContract(file);
+      // An unreadable existing contract must not abort inference for every
+      // other event. Report it, skip this one, and keep going; --rebuild
+      // regenerates it from scratch without reading the broken file.
+      let existing;
+      try {
+        existing = rebuild ? null : loadContract(file);
+      } catch (e) {
+        log(`${provider}/${event}: SKIPPED - ${(e as Error).message.split("\n").join(" ")}`);
+        failed += 1;
+        continue;
+      }
       const stamp = now();
       const contract = existing
         ? mergeContract(existing, obs, stamp)
@@ -58,10 +69,18 @@ export function runInfer(opts: InferOptions): number {
     }
   }
 
-  if (wrote === 0) {
+  if (wrote === 0 && failed === 0) {
     log("No contracts written — check the fixtures globs in hookdrift.config.json.");
     return 1;
   }
-  log(`\n${wrote} contract(s) in ${config.contractsDir}/ — commit them to git.`);
+  if (wrote > 0) {
+    log(`\n${wrote} contract(s) in ${config.contractsDir}/ — commit them to git.`);
+  }
+  if (failed > 0) {
+    log(
+      `${failed} contract(s) skipped as unreadable. Fix the edit, or regenerate with \`hookdrift infer --rebuild\`.`,
+    );
+    return 1;
+  }
   return 0;
 }

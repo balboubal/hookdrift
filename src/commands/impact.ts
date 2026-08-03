@@ -67,6 +67,17 @@ export function runImpact(
     log(`No "source" globs configured in hookdrift.config.json - findings shown without code references.`);
   }
   const run = JSON.parse(readFileSync(runFile, "utf8")) as LastRun;
+  // Exit semantics are computed over ALL unsuppressed findings, including the
+  // pathless ones impact cannot map (root-level type changes, invalid
+  // contracts). Mapping nothing is not the same as finding nothing, and impact
+  // must never report health that contradicts the check it read.
+  const unmappable = run.findings.filter((f) => !f.suppressed);
+  const exitFor = (strictOn: boolean) =>
+    unmappable.some((f) => f.severity === "BREAKING") ||
+    (strictOn && unmappable.some((f) => f.severity === "WARNING"))
+      ? 1
+      : 0;
+
   const targets = run.findings.filter((f) => f.path && !f.suppressed);
   if (targets.length === 0) {
     if (run.exitCode !== 0 && run.findings.length === 0) {
@@ -74,6 +85,15 @@ export function runImpact(
       // that failure instead of reporting "nothing to map" with exit 0.
       log("The last check exited non-zero without checking anything - no fixtures matched.");
       return run.exitCode;
+    }
+    if (unmappable.length > 0) {
+      log(
+        `Last check produced ${unmappable.length} finding(s), none with a searchable path (root-level or contract-level) - nothing to map.`,
+      );
+      for (const f of unmappable) {
+        log("  " + formatFinding(f, false).split("\n").join("\n  "));
+      }
+      return exitFor(strictEff);
     }
     log("Last check produced no unsuppressed findings - nothing to map.");
     return 0;
@@ -137,10 +157,7 @@ export function runImpact(
       (strictEff ? " [strict]" : ""),
   );
 
-  // Exit semantics identical to check, over the same findings it just mapped:
-  // breaking always fails; warnings fail under strict.
-  const active = run.findings.filter((f) => !f.suppressed);
-  const breaking = active.filter((f) => f.severity === "BREAKING").length;
-  const warning = active.filter((f) => f.severity === "WARNING").length;
-  return breaking > 0 || (strictEff && warning > 0) ? 1 : 0;
+  // Exit semantics identical to check, over every unsuppressed finding in the
+  // run - not only the mappable ones.
+  return exitFor(strictEff);
 }

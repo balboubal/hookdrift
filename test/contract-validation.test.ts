@@ -50,15 +50,12 @@ describe("corrupted committed contracts fail loudly, naming the file", () => {
   it("REGRESSION: missing samplesObserved no longer poisons the contract on merge", () => {
     mutate((c) => delete c.samplesObserved);
     expect(() => loadContract(contractFile)).toThrowError(/samplesObserved/);
-    // Through the command: infer must fail loudly, not write nulls with exit 0.
-    let threw = false;
-    try {
-      runInfer({ cwd, log: quiet, now });
-    } catch (e) {
-      threw = true;
-      expect((e as Error).message).toContain(contractFile);
-    }
-    expect(threw).toBe(true);
+    // Through the command: infer reports and skips it (exit 1) rather than
+    // writing nulls with exit 0. It no longer throws - one bad contract must
+    // not abort inference for every other event.
+    const lines: string[] = [];
+    expect(runInfer({ cwd, log: (l) => lines.push(l), now })).toBe(1);
+    expect(lines.join("\n")).toContain("SKIPPED");
     // And the on-disk contract was not rewritten with nulls.
     const onDisk = JSON.parse(readFileSync(contractFile, "utf8"));
     expect(onDisk.fields.amount.presence).not.toBeNull();
@@ -81,13 +78,12 @@ describe("corrupted committed contracts fail loudly, naming the file", () => {
   it("truncated JSON names the file instead of throwing a bare parse error", () => {
     writeFileSync(contractFile, readFileSync(contractFile, "utf8").slice(0, 40));
     expect(() => loadContract(contractFile)).toThrowError(new RegExp("is not valid JSON"));
-    let msg = "";
-    try {
-      runCheck({ cwd, log: quiet, now });
-    } catch (e) {
-      msg = (e as Error).message;
-    }
-    expect(msg).toContain("e.contract.json");
+    // check surfaces it as a finding naming the file, and still fails the run.
+    const lines: string[] = [];
+    expect(runCheck({ cwd, log: (l) => lines.push(l), now })).toBe(1);
+    const out = lines.join("\n");
+    expect(out).toContain("e.contract.json");
+    expect(out).toContain("is not valid JSON");
   });
 
   it("unknown extra keys pass through (forward compatibility)", () => {
