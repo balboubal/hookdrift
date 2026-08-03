@@ -21,6 +21,14 @@ export function runExplain(cwd: string, log: (l: string) => void = console.log):
   const run = JSON.parse(readFileSync(file, "utf8")) as LastRun;
   log(`Last check: ${run.ranAt}${run.strict ? " [strict]" : ""} (exit ${run.exitCode})`);
   if (run.findings.length === 0) {
+    if (run.exitCode !== 0) {
+      // Zero findings with a failing exit means check ran but checked nothing
+      // (its globs matched no fixtures). "No drift detected" would launder
+      // that failure into health.
+      log("The last check exited non-zero without checking anything - no fixtures matched.");
+      log("That is not evidence of health. Fix the fixtures globs and re-run `hookdrift check`.");
+      return run.exitCode;
+    }
     log("No drift detected.");
     return 0;
   }

@@ -69,6 +69,12 @@ export function runImpact(
   const run = JSON.parse(readFileSync(runFile, "utf8")) as LastRun;
   const targets = run.findings.filter((f) => f.path && !f.suppressed);
   if (targets.length === 0) {
+    if (run.exitCode !== 0 && run.findings.length === 0) {
+      // check failed without producing findings: it checked nothing. Mirror
+      // that failure instead of reporting "nothing to map" with exit 0.
+      log("The last check exited non-zero without checking anything - no fixtures matched.");
+      return run.exitCode;
+    }
     log("Last check produced no unsuppressed findings - nothing to map.");
     return 0;
   }

@@ -83,6 +83,17 @@ describe("infer → check wiring and exit codes", () => {
     expect(lines.join("\n")).toContain("no fixtures matched");
   });
 
+  it("REGRESSION: explain and impact mirror a checked-nothing failure instead of laundering it", async () => {
+    const { runExplain } = await import("../src/commands/misc.js");
+    const { runImpact } = await import("../src/commands/impact.js");
+    writeConfig(); // glob matches nothing - no fixtures written
+    expect(runCheck({ cwd, log: quiet, now })).toBe(1);
+    const lines: string[] = [];
+    expect(runExplain(cwd, (l) => lines.push(l))).toBe(1); // was 0 with "No drift detected."
+    expect(lines.join("\n")).toContain("not evidence of health");
+    expect(runImpact(cwd, quiet)).toBe(1); // was 0
+  });
+
   it("uncontracted events are INFO, exit 0", () => {
     writeConfig();
     writeFixtures("stripe", "charge.succeeded", [{ amount: 100 }]);
