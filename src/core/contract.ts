@@ -1,5 +1,6 @@
 import { mkdirSync, readFileSync, writeFileSync, existsSync } from "node:fs";
 import { dirname, join } from "node:path";
+import { z } from "zod";
 import type { Contract, FieldSchema, JsonType, Observation, PathStats } from "../types.js";
 import { pickFormat } from "./formats.js";
 import { ENUM_MAX_DISTINCT, ENUM_MIN_SAMPLES } from "./observe.js";
@@ -184,16 +185,59 @@ export function contractPath(contractsDir: string, provider: string, event: stri
   return join(contractsDir, provider, `${safe}.contract.json`);
 }
 
+// Contracts are committed files the README invites users to hand-edit
+// (polymorphic: true), and they survive merge conflicts. Unvalidated, a broken
+// edit either silently changed severities (a truthy string for polymorphic) or
+// poisoned the contract on the next merge (missing samplesObserved arithmetic
+// produced presence: null on every field, written back with exit 0). Loose
+// objects: unknown keys pass through for forward compatibility; known keys
+// must have sane types and ranges.
+const FieldZ = z.looseObject({
+  types: z.array(z.enum(["string", "number", "boolean", "object", "array"])),
+  presence: z.number().min(0).max(1),
+  nullable: z.boolean().optional(),
+  format: z.string().optional(),
+  intOnly: z.boolean().optional(),
+  enum: z.array(z.string()).optional(),
+  enumConfidence: z.number().min(0).max(1).optional(),
+  polymorphic: z.boolean().optional(),
+});
+const ContractZ = z.looseObject({
+  version: z.literal(1),
+  provider: z.string().min(1),
+  event: z.string().min(1),
+  samplesObserved: z.number().int().min(1),
+  firstSeen: z.string(),
+  lastUpdated: z.string(),
+  fields: z.record(z.string(), FieldZ),
+});
+
 export function loadContract(file: string): Contract | null {
   if (!existsSync(file)) return null;
   // Strip a UTF-8 BOM - a committed contract may have been touched by an editor
   // that adds one.
-  const parsed = JSON.parse(readFileSync(file, "utf8").replace(/^\uFEFF/, "")) as Contract;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(readFileSync(file, "utf8").replace(/^\uFEFF/, ""));
+  } catch (e) {
+    throw new Error(`${file} is not valid JSON: ${(e as Error).message}`);
+  }
+  const v = ContractZ.safeParse(parsed);
+  if (!v.success) {
+    const lines = v.error.issues.map(
+      (i) => `  ${i.path.length ? i.path.join(".") : "(root)"}: ${i.message}`,
+    );
+    throw new Error(
+      `${file} is not a valid contract:\n${lines.join("\n")}\n` +
+        `Fix the edit, or regenerate with \`hookdrift infer --rebuild\`.`,
+    );
+  }
+  const contract = parsed as Contract;
   // JSON.parse creates own properties (even for "__proto__"), but downstream
   // code does `path in fields` and `fields[path] =` - re-key onto a
   // null-prototype record so prototype members can never shadow real paths.
-  parsed.fields = nullProtoRecord(parsed.fields);
-  return parsed;
+  contract.fields = nullProtoRecord(contract.fields);
+  return contract;
 }
 
 export function saveContract(file: string, contract: Contract): void {
