@@ -6,6 +6,19 @@ import { ENUM_MAX_DISTINCT, ENUM_MIN_SAMPLES } from "./observe.js";
 
 const TYPE_ORDER: JsonType[] = ["string", "number", "boolean", "object", "array"];
 
+/**
+ * Contract fields are keyed by payload paths, and payloads can legally contain
+ * keys like "__proto__", "constructor" or "toString". On a plain object those
+ * collide with Object.prototype: assigning fields["__proto__"] hits the
+ * prototype setter and silently drops the field, and `"toString" in fields` is
+ * always true. Null-prototype objects make every key an ordinary key.
+ */
+function nullProtoRecord<T>(src?: Record<string, T>): Record<string, T> {
+  const out = Object.create(null) as Record<string, T>;
+  if (src) for (const k of Object.keys(src)) out[k] = src[k]!;
+  return out;
+}
+
 function sortTypes(types: Iterable<JsonType>): JsonType[] {
   return [...types].sort((a, b) => TYPE_ORDER.indexOf(a) - TYPE_ORDER.indexOf(b));
 }
@@ -58,7 +71,7 @@ export function buildContract(
   obs: Observation,
   now: string,
 ): Contract {
-  const fields: Record<string, FieldSchema> = {};
+  const fields = nullProtoRecord<FieldSchema>();
   for (const path of [...obs.paths.keys()].sort()) {
     fields[path] = fieldFromStats(obs.paths.get(path)!, obs.totalSamples);
   }
@@ -82,7 +95,7 @@ export function buildContract(
  */
 export function mergeContract(old: Contract, obs: Observation, now: string): Contract {
   const total = old.samplesObserved + obs.totalSamples;
-  const fields: Record<string, FieldSchema> = {};
+  const fields = nullProtoRecord<FieldSchema>();
   const allPaths = new Set([...Object.keys(old.fields), ...obs.paths.keys()]);
 
   for (const path of [...allPaths].sort()) {
@@ -175,7 +188,12 @@ export function loadContract(file: string): Contract | null {
   if (!existsSync(file)) return null;
   // Strip a UTF-8 BOM - a committed contract may have been touched by an editor
   // that adds one.
-  return JSON.parse(readFileSync(file, "utf8").replace(/^\uFEFF/, "")) as Contract;
+  const parsed = JSON.parse(readFileSync(file, "utf8").replace(/^\uFEFF/, "")) as Contract;
+  // JSON.parse creates own properties (even for "__proto__"), but downstream
+  // code does `path in fields` and `fields[path] =` - re-key onto a
+  // null-prototype record so prototype members can never shadow real paths.
+  parsed.fields = nullProtoRecord(parsed.fields);
+  return parsed;
 }
 
 export function saveContract(file: string, contract: Contract): void {
