@@ -53,9 +53,13 @@ export function runImpact(
     log("No previous check found. Run `hookdrift check` first.");
     return 1;
   }
-  if (config.source.length === 0) {
-    log(`No "source" globs configured in hookdrift.config.json - nothing to search.`);
-    return 1;
+  // Empty source globs used to return 1 unconditionally here, which after the
+  // exit-semantics change masqueraded as the strict gate firing. Mapping is
+  // impossible without globs, but the findings and the findings-based exit
+  // code are still meaningful - fall through with a note instead.
+  const canSearch = config.source.length > 0;
+  if (!canSearch) {
+    log(`No "source" globs configured in hookdrift.config.json - findings shown without code references.`);
   }
   const run = JSON.parse(readFileSync(runFile, "utf8")) as LastRun;
   const targets = run.findings.filter((f) => f.path && !f.suppressed);
@@ -64,7 +68,9 @@ export function runImpact(
     return 0;
   }
 
-  const files = [...new Set(config.source.flatMap((g) => globSync(g, { cwd, absolute: true })))].sort();
+  const files = canSearch
+    ? [...new Set(config.source.flatMap((g) => globSync(g, { cwd, absolute: true })))].sort()
+    : [];
   const matchers = targets.map((f) => buildMatchers(segmentsOf(f.path)));
 
   for (const file of files) {

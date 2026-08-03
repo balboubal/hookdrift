@@ -487,6 +487,24 @@ describe("impact (heuristic code mapping)", () => {
     expect(refs[1]!.score).toBeGreaterThan(refs[2]!.score);
   });
 
+  it("empty source globs: findings shown, exit follows findings - not a blanket 1", () => {
+    // The old unconditional `return 1` here masqueraded as the strict gate
+    // after impact gained check's exit semantics.
+    writeConfig({ source: [] });
+    writeFx("a.json", { amount: 1, opt: 1 });
+    writeFx("b.json", { amount: 1, opt: 1 });
+    runInfer({ cwd, log: quiet, now });
+    rmSync(join(cwd, "fx"), { recursive: true });
+    writeFx("a.json", { amount: 1, opt: 1 });
+    writeFx("b.json", { amount: 1 }); // WARNING only
+    runCheck({ cwd, log: quiet, now });
+
+    const lines: string[] = [];
+    expect(runImpact(cwd, (l) => lines.push(l))).toBe(0); // was 1 before
+    expect(lines.join("\n")).toContain("without code references");
+    expect(runImpact(cwd, quiet, true)).toBe(1); // strict still gates
+  });
+
   it("--strict exits 1 on warning-only findings; without the flag exits 0", () => {
     writeConfig({ source: ["src/**/*.js"] });
     writeFx("a.json", { amount: 1, opt: 1 });
