@@ -1,6 +1,6 @@
 {
   "name": "hookdrift",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Detect when a third-party webhook payload changes shape — before it silently breaks your handler.",
   "license": "MIT",
   "author": "amutsu",
@@ -19,6 +19,9 @@
   "files": [
     "dist"
   ],
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/"
+  },
   "engines": {
     "node": ">=20"
   },
