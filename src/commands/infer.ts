@@ -2,6 +2,7 @@ import { join } from "node:path";
 import { loadConfig } from "../core/config.js";
 import { loadFixtures } from "../core/fixtures.js";
 import { observe } from "../core/observe.js";
+import { plain } from "../core/text.js";
 import {
   buildContract,
   contractPath,
@@ -38,67 +39,69 @@ export function runInfer(opts: InferOptions): number {
 
   for (const [provider, pc] of Object.entries(config.providers)) {
     const batch = loadFixtures(cwd, pc.fixtures, pc.eventPath, fixturesDir);
-    for (const s of batch.skipped) log(`  skipped ${s.file}: ${s.reason}`);
+    for (const s of batch.skipped) log(`  skipped ${plain(s.file)}: ${s.reason}`);
     if (batch.events.size === 0) {
       log(`${provider}: no fixtures matched ${pc.fixtures}${fixturesDir ? ` under ${fixturesDir}` : ""}`);
       continue;
     }
     for (const [event, samples] of [...batch.events.entries()].sort()) {
-      // A payload past the depth limit must not abort inference for every
-      // other event, matching how check isolates one bad contract.
-      let obs;
+      const id = plain(`${provider}/${event}`);
+      // Every per-event failure is isolated, not just the ones anticipated
+      // here: a payload past the depth limit, an unreadable existing contract,
+      // an identity mismatch, and filesystem errors from the write itself (an
+      // over-long event name aborted the whole command with a bare errno).
+      // One bad event must never cost the inference of every other event.
       try {
-        obs = observe(samples);
-      } catch (e) {
-        log(`${provider}/${event}: SKIPPED - ${(e as Error).message}`);
-        failed += 1;
-        continue;
-      }
-      const file = contractPath(contractsDir, provider, event);
-      // An unreadable existing contract must not abort inference for every
-      // other event. Report it, skip this one, and keep going; --rebuild
-      // regenerates it from scratch without reading the broken file.
-      let existing;
-      try {
-        existing = rebuild ? null : loadContract(file);
-      } catch (e) {
-        log(`${provider}/${event}: SKIPPED - ${(e as Error).message.split("\n").join(" ")}`);
-        failed += 1;
-        continue;
-      }
-      const stamp = now();
-      const contract = existing
-        ? mergeContract(existing, obs, stamp)
-        : buildContract(provider, event, obs, stamp);
-      saveContract(file, contract);
-      wrote += 1;
-      const verb = existing ? "updated" : rebuild ? "rebuilt" : "created";
-      log(
-        `${provider}/${event}: ${verb} (${samples.length} new sample(s), ${contract.samplesObserved} total, ${Object.keys(contract.fields).length} paths)`,
-      );
-      // Surface heuristic decisions - the user should see every inference made.
-      for (const [path, field] of Object.entries(contract.fields)) {
-        if (field.polymorphic && !existing?.fields[path]?.polymorphic) {
+        const obs = observe(samples);
+        const file = contractPath(contractsDir, provider, event);
+        // --rebuild regenerates from scratch without reading the old file.
+        const existing = rebuild ? null : loadContract(file, { provider, event });
+        const stamp = now();
+        const contract = existing
+          ? mergeContract(existing, obs, stamp)
+          : buildContract(provider, event, obs, stamp);
+        saveContract(file, contract);
+        wrote += 1;
+        const verb = existing ? "updated" : rebuild ? "rebuilt" : "created";
+        log(
+          `${id}: ${verb} (${samples.length} new sample(s), ${contract.samplesObserved} total, ${Object.keys(contract.fields).length} paths)`,
+        );
+        // Surface heuristic decisions - the user should see every inference made.
+        for (const [path, field] of Object.entries(contract.fields)) {
+          if (field.polymorphic && !existing?.fields[path]?.polymorphic) {
+            log(
+              `  note: ${plain(path)} marked polymorphic (observed as both ID string and object - expandable field)`,
+            );
+          }
+        }
+        // Object keys become path segments and the event name is a payload
+        // value, so a map keyed by data - or a discriminator read from the
+        // wrong field - writes that data into a file you are about to commit.
+        // Warn at the moment it happens rather than only in SECURITY.md.
+        const sensitive = Object.keys(contract.fields).filter((p) =>
+          p.split(".").some((seg) => SENSITIVE_SEGMENT.test(seg)),
+        );
+        if (sensitive.length > 0) {
           log(
-            `  note: ${path} marked polymorphic (observed as both ID string and object - expandable field)`,
+            `  WARNING: ${sensitive.length} contract path(s) look like data rather than structure, e.g. ${sensitive
+              .slice(0, 3)
+              .map(plain)
+              .join(", ")}${sensitive.length > 3 ? ", ..." : ""}`,
+          );
+          log(
+            `           Object keys become path segments. Review this contract before committing it - see SECURITY.md.`,
           );
         }
-      }
-      // Object keys become path segments, so a map keyed by data writes that
-      // data into a file you are about to commit. Warn at the moment it
-      // happens rather than only in SECURITY.md.
-      const sensitive = Object.keys(contract.fields).filter((p) =>
-        p.split(".").some((seg) => SENSITIVE_SEGMENT.test(seg)),
-      );
-      if (sensitive.length > 0) {
-        log(
-          `  WARNING: ${sensitive.length} contract path(s) look like data rather than structure, e.g. ${sensitive
-            .slice(0, 3)
-            .join(", ")}${sensitive.length > 3 ? ", ..." : ""}`,
-        );
-        log(
-          `           Object keys become path segments. Review this contract before committing it - see SECURITY.md.`,
-        );
+        if (SENSITIVE_SEGMENT.test(event)) {
+          log(
+            `  WARNING: the event name itself looks like data rather than an event type.` +
+              ` It is stored in the contract and in its filename - check "eventPath" points at the` +
+              ` discriminator field, not at payload content. See SECURITY.md.`,
+          );
+        }
+      } catch (e) {
+        log(`${id}: SKIPPED - ${plain((e as Error).message).split("\n").join(" ")}`);
+        failed += 1;
       }
     }
   }

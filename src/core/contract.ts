@@ -1,4 +1,5 @@
-import { mkdirSync, writeFileSync, existsSync, renameSync } from "node:fs";
+import { mkdirSync, writeFileSync, existsSync, renameSync, realpathSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { dirname, join, resolve, sep } from "node:path";
 import { z } from "zod";
 import { readTextFileSync } from "./read.js";
@@ -187,22 +188,66 @@ export function mergeContract(old: Contract, obs: Observation, now: string): Con
 }
 
 /**
- * Sanitize an event name into a filename. Distinct events can sanitize to the
- * same string ("a/b" and "a_b"), which silently merged two contracts into one
- * file, so a short hash of the original name disambiguates. Names that are
- * already filename-safe keep their plain form, so existing contracts and the
- * common case are untouched.
+ * Windows reserves these device names, with or without an extension, so
+ * `CON.contract.json` is not a writable file there.
+ * https://learn.microsoft.com/en-us/windows/win32/fileio/naming-a-file
+ */
+const WIN_RESERVED = /^(con|prn|aux|nul|com[0-9]|lpt[0-9])$/i;
+/** Readable prefix kept ahead of the digest, and the cap on a plain name. */
+const NAME_PREFIX_MAX = 64;
+/**
+ * Longest provider/event identity we will accept at all. Event names come from
+ * the payload, so without a bound a webhook can name a file of arbitrary
+ * length; a 300-character event aborted the entire run with a bare filesystem
+ * errno.
+ */
+export const IDENTITY_MAX = 200;
+
+/**
+ * Storage identity for an event.
+ *
+ * A name keeps its plain readable form only when it is unambiguous on every
+ * filesystem hookdrift supports: filename-safe ASCII, already lowercase
+ * (Windows and macOS compare case-insensitively, so `Event` and `event` would
+ * otherwise share one file), bounded in length, not a Windows device name and
+ * not dot-only. Everything else gets a bounded prefix plus 64 bits of SHA-256.
+ *
+ * The previous 32-bit polynomial hash was collidable by hand rather than by
+ * search - "/̀" and "?Đ" both sanitized to `__` and both hashed to
+ * `1pt`, so two unrelated events silently merged into one plausible-looking
+ * contract. Real provider events (Stripe, Shopify, GitHub) are lowercase and
+ * short, so they keep the plain filename they have today.
  */
 export function eventFileName(event: string): string {
-  const safe = event.replace(/[^a-zA-Z0-9._-]/g, "_");
-  if (safe === event) return `${event}.contract.json`;
-  let h = 0;
-  for (let i = 0; i < event.length; i++) h = (Math.imul(h, 31) + event.charCodeAt(i)) | 0;
-  const suffix = (h >>> 0).toString(36).slice(0, 6);
-  return `${safe}~${suffix}.contract.json`;
+  const plain =
+    /^[a-z0-9._-]+$/.test(event) &&
+    event.length <= NAME_PREFIX_MAX &&
+    !WIN_RESERVED.test(event) &&
+    !/^\.+$/.test(event) &&
+    !event.endsWith(".");
+  if (plain) return `${event}.contract.json`;
+  const prefix = event.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, NAME_PREFIX_MAX) || "event";
+  const digest = createHash("sha256").update(event, "utf8").digest("hex").slice(0, 16);
+  return `${prefix}~${digest}.contract.json`;
+}
+
+/** realpath, or null when the path does not exist yet. */
+function realOrNull(p: string): string | null {
+  try {
+    return realpathSync(p);
+  } catch {
+    return null;
+  }
 }
 
 export function contractPath(contractsDir: string, provider: string, event: string): string {
+  if (provider.length > IDENTITY_MAX || event.length > IDENTITY_MAX) {
+    throw new Error(
+      `provider/event identity longer than ${IDENTITY_MAX} characters is refused ` +
+        `(provider ${provider.length}, event ${event.length}) - a payload must not be able to ` +
+        `name a file of unbounded length`,
+    );
+  }
   const file = join(contractsDir, provider, eventFileName(event));
   // Defence in depth: config validation already restricts provider names, but
   // a contract path must never escape contractsDir regardless of how it got
@@ -212,6 +257,21 @@ export function contractPath(contractsDir: string, provider: string, event: stri
   if (target !== root && !target.startsWith(root + sep)) {
     throw new Error(
       `refusing to use a contract path outside ${contractsDir}: provider "${provider}" resolves to ${target}`,
+    );
+  }
+  // resolve() is lexical: it normalises `..` but does not follow symlinks, so a
+  // symlinked provider directory passed the check above and then wrote outside
+  // the tree entirely. Compare real path to real path where both already exist.
+  const realRoot = realOrNull(root);
+  const realParent = realOrNull(dirname(target));
+  if (
+    realRoot &&
+    realParent &&
+    realParent !== realRoot &&
+    !realParent.startsWith(realRoot + sep)
+  ) {
+    throw new Error(
+      `refusing to use a contract path outside ${contractsDir}: "${provider}" is a link to ${realParent}`,
     );
   }
   return file;
@@ -236,17 +296,69 @@ const FieldZ = z.looseObject({
   enumConfidence: z.number().min(0).max(1).optional(),
   polymorphic: z.boolean().optional(),
 });
-const ContractZ = z.looseObject({
-  version: z.literal(1),
-  provider: z.string().min(1),
-  event: z.string().min(1),
-  samplesObserved: z.number().int().min(1),
-  firstSeen: z.string(),
-  lastUpdated: z.string(),
-  fields: z.record(z.string(), FieldZ),
-});
+const ContractZ = z
+  .looseObject({
+    version: z.literal(1),
+    provider: z.string().min(1),
+    event: z.string().min(1),
+    samplesObserved: z.number().int().min(1),
+    firstSeen: z.string(),
+    lastUpdated: z.string(),
+    fields: z.record(z.string(), FieldZ),
+  })
+  // Primitive types alone let a hand-edit or a merge conflict produce a
+  // contract that is individually valid and jointly nonsense. The reproduced
+  // case: presence 0 with containCount 100 of 100 samples was accepted, and
+  // the complete disappearance of that required field came out as INFO with
+  // exit 0 - a false green from a file that passed validation.
+  .superRefine((c, ctx) => {
+    const bad = (path: (string | number)[], message: string) =>
+      ctx.addIssue({ code: "custom", path, message });
+    for (const [name, f] of Object.entries(c.fields)) {
+      const at = ["fields", name];
+      if (f.types.length !== new Set(f.types).size) bad([...at, "types"], "duplicate type entries");
+      if (f.containCount !== undefined) {
+        if (f.containCount > c.samplesObserved) {
+          bad(
+            [...at, "containCount"],
+            `containCount ${f.containCount} exceeds samplesObserved ${c.samplesObserved}`,
+          );
+        } else {
+          // presence is the 4dp rounding of containCount/samplesObserved.
+          const expected = Math.round((f.containCount / c.samplesObserved) * 10000) / 10000;
+          if (Math.abs(expected - f.presence) > 0.0001) {
+            bad(
+              [...at, "presence"],
+              `presence ${f.presence} contradicts containCount ${f.containCount}/${c.samplesObserved} (expected ${expected})`,
+            );
+          }
+        }
+      }
+      if (f.enum) {
+        if (f.enum.length === 0) bad([...at, "enum"], "enum must not be empty");
+        if (f.enum.length !== new Set(f.enum).size) bad([...at, "enum"], "duplicate enum values");
+        if (!f.types.includes("string")) {
+          bad([...at, "enum"], `enum on a field typed [${f.types.join(", ")}] - enums are string-only`);
+        }
+      } else if (f.enumAuthoritative) {
+        bad([...at, "enumAuthoritative"], "enumAuthoritative set on a field with no enum");
+      }
+      if (f.polymorphic && f.types.some((t) => t !== "string" && t !== "object")) {
+        bad(
+          [...at, "polymorphic"],
+          `polymorphic marks the string/object expandable pair, but types are [${f.types.join(", ")}]`,
+        );
+      }
+    }
+    for (const k of ["firstSeen", "lastUpdated"] as const) {
+      if (Number.isNaN(Date.parse(c[k]))) bad([k], `not a parseable timestamp: ${c[k]}`);
+    }
+  });
 
-export function loadContract(file: string): Contract | null {
+export function loadContract(
+  file: string,
+  expect?: { provider: string; event: string },
+): Contract | null {
   if (!existsSync(file)) return null;
   // Encoding-tolerant read - a committed contract may have been re-saved by an
   // editor with a UTF-8 BOM or piped through PowerShell as UTF-16.
@@ -267,6 +379,18 @@ export function loadContract(file: string): Contract | null {
     );
   }
   const contract = parsed as Contract;
+  // The file name is derived from the identity, so a file that holds a
+  // different identity than the caller asked for means the mapping broke -
+  // a hash collision, a case-insensitive filesystem, or a hand-rename. Merging
+  // it would fold two events into one plausible-looking contract, so fail loudly
+  // even though the digest makes this astronomically unlikely.
+  if (expect && (contract.provider !== expect.provider || contract.event !== expect.event)) {
+    throw new Error(
+      `${file} holds the contract for "${contract.provider}/${contract.event}", ` +
+        `but was opened as "${expect.provider}/${expect.event}". Refusing to merge two identities ` +
+        `into one file. Rename or regenerate with \`hookdrift infer --rebuild\`.`,
+    );
+  }
   // JSON.parse creates own properties (even for "__proto__"), but downstream
   // code does `path in fields` and `fields[path] =` - re-key onto a
   // null-prototype record so prototype members can never shadow real paths.

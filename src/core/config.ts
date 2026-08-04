@@ -1,5 +1,5 @@
 import { existsSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve, sep } from "node:path";
 import { z } from "zod";
 import { readTextFileSync } from "./read.js";
 import type { HookdriftConfig } from "../types.js";
@@ -35,11 +35,18 @@ const ConfigSchema = z
         z
           .string()
           .min(1, "provider name must not be empty")
+          .max(64, "provider name must be at most 64 characters")
           .regex(
             /^[A-Za-z0-9._-]+$/,
             "provider name may only contain letters, numbers, dot, underscore and hyphen",
           )
-          .refine((s) => s !== "." && s !== "..", "provider name must not be . or .."),
+          .refine((s) => s !== "." && s !== "..", "provider name must not be . or ..")
+          // A provider name is a directory name, and these are device names on
+          // Windows with or without an extension - the directory cannot exist.
+          .refine(
+            (s) => !/^(con|prn|aux|nul|com[0-9]|lpt[0-9])$/i.test(s),
+            "provider name must not be a Windows reserved device name (CON, PRN, AUX, NUL, COM1-9, LPT1-9)",
+          ),
         // .strict(): a misplaced key inside a provider (e.g. `strict` or a
         // mistyped `eventpath`) used to be silently dropped.
         z
@@ -107,7 +114,18 @@ export function loadConfig(cwd: string): HookdriftConfig {
     });
     throw new Error(`Invalid ${CONFIG_FILE}:\n${lines.join("\n")}`);
   }
-  return parsed.data as HookdriftConfig;
+  const config = parsed.data as HookdriftConfig;
+  // contractsDir is the one path hookdrift WRITES to. An absolute or ../
+  // value - in a config an untrusted pull request can edit - makes that write
+  // land anywhere the job can reach, so it is required to stay in the project.
+  const root = resolve(cwd);
+  const dir = resolve(cwd, config.contractsDir);
+  if (dir !== root && !dir.startsWith(root + sep)) {
+    throw new Error(
+      `Invalid ${CONFIG_FILE}:\n  contractsDir: must stay inside the project (${config.contractsDir} resolves to ${dir})`,
+    );
+  }
+  return config;
 }
 
 export function writeDefaultConfig(cwd: string): string {
