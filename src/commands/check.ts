@@ -20,6 +20,8 @@ export interface CheckOptions {
   failOnSkipped?: boolean;
   /** Fail the run if fixtures contained an event with no committed contract. */
   failOnUncontracted?: boolean;
+  /** Fail the run if a committed contract received no fixtures. */
+  failOnUnexercised?: boolean;
   log?: (line: string) => void;
   now?: () => string;
 }
@@ -121,6 +123,7 @@ export function runCheck(opts: CheckOptions): number {
   const strict = opts.strict ?? config.strict;
   const failOnSkipped = opts.failOnSkipped ?? config.failOnSkipped;
   const failOnUncontracted = opts.failOnUncontracted ?? config.failOnUncontracted;
+  const failOnUnexercised = opts.failOnUnexercised ?? config.failOnUnexercised;
   const contractsDir = join(cwd, config.contractsDir);
   const findings: Finding[] = [];
   const exercised = new Set<string>();
@@ -223,9 +226,28 @@ export function runCheck(opts: CheckOptions): number {
     .sort();
   if (unexercised.length > 0) {
     const names = coverage.contractsUnexercised.slice(0, 5).join(", ");
-    log(
-      `note: ${unexercised.length} committed contract(s) not exercised by this run (no matching fixtures): ${names}${unexercised.length > 5 ? ", ..." : ""}`,
-    );
+    const tail = `${names}${unexercised.length > 5 ? ", ..." : ""}`;
+    if (failOnUnexercised) {
+      // The gate that makes a green run mean "every committed contract was
+      // actually compared" - without it, a capture pipeline that quietly stops
+      // emitting one event type keeps CI green forever.
+      findings.push({
+        provider: "",
+        event: "",
+        path: "",
+        severity: "BREAKING",
+        kind: "unexercised_contract",
+        message:
+          `${unexercised.length} committed contract(s) received no fixtures this run [--fail-on-unexercised]: ${tail}` +
+          (coverage.partial
+            ? ` - the directory argument narrowed this run, so either widen it or drop --fail-on-unexercised for partial runs`
+            : ""),
+      });
+    } else {
+      log(
+        `note: ${unexercised.length} committed contract(s) not exercised by this run (no matching fixtures): ${tail}`,
+      );
+    }
   }
 
   // A fixture that could not be parsed or had no event is a hole in coverage:

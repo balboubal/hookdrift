@@ -96,6 +96,7 @@ export type FindingKind =
   | "new_field"
   | "presence_shift"
   | "uncontracted_event"
+  | "unexercised_contract"
   | "invalid_contract"
   | "skipped_fixture";
 
@@ -141,5 +142,6 @@ export interface HookdriftConfig {
   failOnSkipped: boolean;
   /** Fail the run when fixtures contain an event with no committed contract. */
   failOnUncontracted: boolean;
+  failOnUnexercised: boolean;
   ignore: IgnoreRule[];
 }

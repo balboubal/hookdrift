@@ -26,7 +26,7 @@ export function readVersion(): string {
 const ALLOWED_FLAGS: Record<string, readonly string[]> = {
   init: [],
   infer: ["--rebuild"],
-  check: ["--strict", "--json", "--show-suppressed", "--fail-on-skipped", "--fail-on-uncontracted"],
+  check: ["--strict", "--json", "--show-suppressed", "--fail-on-skipped", "--fail-on-uncontracted", "--fail-on-unexercised"],
   impact: ["--strict"],
   explain: [],
   // The aliases too, or `hookdrift --version --bogus` exits 0 and a user
@@ -93,6 +93,7 @@ export function main(argv: string[], cwd: string): number {
           json: flags.has("--json"),
           failOnSkipped: flags.has("--fail-on-skipped") ? true : undefined,
           failOnUncontracted: flags.has("--fail-on-uncontracted") ? true : undefined,
+          failOnUnexercised: flags.has("--fail-on-unexercised") ? true : undefined,
         });
       case "impact":
         return runImpact(cwd, undefined, flags.has("--strict") ? true : undefined);

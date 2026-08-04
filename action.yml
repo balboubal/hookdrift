@@ -17,6 +17,9 @@ inputs:
   fail-on-uncontracted:
     description: "Fail if fixtures contain an event with no committed contract (same as check --fail-on-uncontracted)"
     default: "false"
+  fail-on-unexercised:
+    description: "Fail if a committed contract received no fixtures (same as check --fail-on-unexercised)"
+    default: "false"
   version:
     description: "hookdrift npm version to run. Pinned by default so a green commit cannot silently run different code later."
     default: "0.1.3"
@@ -36,6 +39,7 @@ runs:
         HOOKDRIFT_STRICT: ${{ inputs.strict }}
         HOOKDRIFT_FAIL_ON_SKIPPED: ${{ inputs.fail-on-skipped }}
         HOOKDRIFT_FAIL_ON_UNCONTRACTED: ${{ inputs.fail-on-uncontracted }}
+        HOOKDRIFT_FAIL_ON_UNEXERCISED: ${{ inputs.fail-on-unexercised }}
       run: |
         set +e
         # SemVer 2.0.0 grammar, not an approximation: the previous pattern
@@ -47,7 +51,7 @@ runs:
         fi
         # Exactly true or false. 'ture' or 'True' silently meant false, the same
         # fail-open that a mistyped --strcit used to be.
-        for pair in "strict=$HOOKDRIFT_STRICT" "fail-on-skipped=$HOOKDRIFT_FAIL_ON_SKIPPED" "fail-on-uncontracted=$HOOKDRIFT_FAIL_ON_UNCONTRACTED"; do
+        for pair in "strict=$HOOKDRIFT_STRICT" "fail-on-skipped=$HOOKDRIFT_FAIL_ON_SKIPPED" "fail-on-uncontracted=$HOOKDRIFT_FAIL_ON_UNCONTRACTED" "fail-on-unexercised=$HOOKDRIFT_FAIL_ON_UNEXERCISED"; do
           case "${pair#*=}" in
             true|false) ;;
             *) echo "hookdrift-action: refusing to run: '${pair%%=*}' must be exactly 'true' or 'false', got '${pair#*=}'" >&2; exit 2 ;;
@@ -57,6 +61,7 @@ runs:
         [ "$HOOKDRIFT_STRICT" = "true" ] && FLAGS="$FLAGS --strict"
         [ "$HOOKDRIFT_FAIL_ON_SKIPPED" = "true" ] && FLAGS="$FLAGS --fail-on-skipped"
         [ "$HOOKDRIFT_FAIL_ON_UNCONTRACTED" = "true" ] && FLAGS="$FLAGS --fail-on-uncontracted"
+        [ "$HOOKDRIFT_FAIL_ON_UNEXERCISED" = "true" ] && FLAGS="$FLAGS --fail-on-unexercised"
         npx -y "hookdrift@$HOOKDRIFT_VERSION" check $FLAGS --json > "$RUNNER_TEMP/hookdrift-report.json"
         echo "exit_code=$?" >> "$GITHUB_OUTPUT"
         # Advisory: never fails the job, but a crash must not masquerade as a

@@ -141,6 +141,7 @@ False-positive control is a design goal, not an afterthought:
   "minSamples": 10,                      // below this, presence findings are INFO
   "failOnSkipped": false,                // fail if a matched fixture could not be parsed
   "failOnUncontracted": false,           // fail if an event has no committed contract
+  "failOnUnexercised": false,            // fail if a committed contract got no fixtures
   "ignore": [
     {
       "path": "data.object.metadata.**", // wildcards are trailing-only: `*` = exactly one
@@ -154,13 +155,13 @@ False-positive control is a design goal, not an afterthought:
 
 The block above is annotated for readability — `hookdrift.config.json` is parsed as strict JSON, so drop the `//` comments if you paste it.
 
-Commands: `init` · `infer [dir]` (`--rebuild` to allow narrowing) · `check [dir]` (`--strict`, `--json`, `--show-suppressed`, `--fail-on-skipped`, `--fail-on-uncontracted`) · `impact` (`--strict`) · `explain`.
+Commands: `init` · `infer [dir]` (`--rebuild` to allow narrowing) · `check [dir]` (`--strict`, `--json`, `--show-suppressed`, `--fail-on-skipped`, `--fail-on-uncontracted`, `--fail-on-unexercised`) · `impact` (`--strict`) · `explain`.
 
 ### Proving what a green run actually checked
 
 An empty findings list is not the same as a complete check. `--json` and `.hookdrift/last-run.json` carry a `coverage` block — files matched, files parsed, files skipped with reasons, events observed, contracts compared, contracts that received no fixtures, and events with no committed contract — so a wrapper can tell "nothing drifted" apart from "nothing was looked at".
 
-Two holes can be made fatal. `--fail-on-skipped` fails the run when a matched fixture could not be parsed (the unreadable file may be the one carrying the breaking shape). `--fail-on-uncontracted` fails it when fixtures contain an event with no committed contract. Both default to off so an upgrade changes nothing until you ask for it; for a gate, turn both on.
+Three holes can be made fatal. `--fail-on-skipped` fails the run when a matched fixture could not be parsed (the unreadable file may be the one carrying the breaking shape). `--fail-on-uncontracted` fails it when fixtures contain an event with no committed contract. `--fail-on-unexercised` fails it when a committed contract received no fixtures — the hole that otherwise grows silently when a capture pipeline stops emitting one event type. All default to off so an upgrade changes nothing until you ask for it; for a real gate, turn on all three: a green run then means every fixture parsed, every event had a contract, and every contract was compared.
 
 ## GitHub Action
 
@@ -178,6 +179,7 @@ steps:
       # Coverage gates - off by default, worth turning on for a real gate:
       fail-on-skipped: false # fail if a matched fixture could not be parsed
       fail-on-uncontracted: false # fail if an event has no committed contract
+      fail-on-unexercised: false # fail if a committed contract received no fixtures
 ```
 
 Pin the action by tag (or commit SHA in high-assurance setups) and pin `version` to an exact release — the CLI version is what determines the result, and an unpinned one lets a passing commit run different code later. On fork pull requests the token is read-only, so the comment step is skipped without failing the job; the check's exit code still decides the outcome.

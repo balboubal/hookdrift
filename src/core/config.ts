@@ -20,6 +20,9 @@ const FINDING_KINDS = [
   "new_field",
   "presence_shift",
   "uncontracted_event",
+  // skipped_fixture and unexercised_contract are deliberately absent: they
+  // only exist when a --fail-on gate was explicitly enabled, and a gate you
+  // asked for must not be silenceable by an ignore rule.
   "invalid_contract",
 ] as const;
 
@@ -62,6 +65,7 @@ const ConfigSchema = z
     minSamples: z.number().int().positive().default(10),
     failOnSkipped: z.boolean().default(false),
     failOnUncontracted: z.boolean().default(false),
+    failOnUnexercised: z.boolean().default(false),
     ignore: z
       .array(
         // .strict(): a typo'd `kinds` used to be stripped, turning a
@@ -89,6 +93,7 @@ export const DEFAULT_CONFIG: HookdriftConfig = {
   minSamples: 10,
   failOnSkipped: false,
   failOnUncontracted: false,
+  failOnUnexercised: false,
   ignore: [],
 };
 

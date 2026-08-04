@@ -61,14 +61,17 @@ Usage:
       --show-suppressed             include findings silenced by ignore rules
       --fail-on-skipped             fail if a matched fixture could not be parsed
       --fail-on-uncontracted        fail if an event has no committed contract
+      --fail-on-unexercised         fail if a committed contract got no fixtures
   hookdrift impact                  map last check's findings to code references
       --strict                      warnings also cause a non-zero exit
   hookdrift explain                 re-print the last check (mirrors its exit code)
   hookdrift --version               print the installed version
 
-The two --fail-on flags also have config equivalents ("failOnSkipped",
-"failOnUncontracted"). Both default to off: a coverage hole is always reported
-in the "coverage" block of --json, but only fails the run when you ask it to.
+The --fail-on flags have config equivalents ("failOnSkipped",
+"failOnUncontracted", "failOnUnexercised"). All default to off: a coverage hole
+is always reported in the "coverage" block of --json, but only fails the run
+when you ask it to. The three together make a green run mean "every fixture
+parsed, every event had a contract, every contract was exercised".
 
 Exit codes: 0 = nothing that should fail a build; 1 = drift found, or the run
 checked nothing at all; 2 = bad usage or bad config (nothing ran).

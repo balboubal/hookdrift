@@ -313,6 +313,31 @@ describe("coverage counts and command aliases", () => {
     expect(lastRun().findings[0]!.message).toMatch(/could not compare/);
   });
 
+  it("--fail-on-unexercised turns a silently-skipped contract into a failure", () => {
+    // Without the gate, a capture pipeline that stops emitting one event type
+    // keeps CI green forever - the contract sits committed and unchecked.
+    writeConfig();
+    fixture("a.json", { type: "alpha", a: 1 });
+    fixture("b.json", { type: "beta", b: 2 });
+    runInfer({ cwd, log: quiet, now });
+    rmSync(join(cwd, "fx", "b.json")); // beta stops arriving
+
+    // Default: a note, exit 0 - partial capture is legitimate.
+    expect(runCheck({ cwd, log: quiet, now })).toBe(0);
+    expect(lastRun().coverage.contractsUnexercised).toEqual(["p/beta.contract.json"]);
+
+    // Gated: BREAKING, exit 1, and the finding is not ignorable by kind.
+    expect(runCheck({ cwd, failOnUnexercised: true, log: quiet, now })).toBe(1);
+    const f = lastRun().findings.find((x) => x.kind === "unexercised_contract");
+    expect(f!.severity).toBe("BREAKING");
+    expect(f!.message).toContain("p/beta.contract.json");
+
+    // A partial run says why it fired and what to do about it.
+    const lines: string[] = [];
+    runCheck({ cwd, fixturesDir: "fx", failOnUnexercised: true, log: (l) => lines.push(l), now });
+    expect(lines.join("\n")).toMatch(/directory argument narrowed this run/);
+  });
+
   it("never claims health without naming the coverage hole", () => {
     // 9 of 10 fixtures unreadable still printed a bare
     // "OK 1 contract(s) checked - no unsuppressed drift." - a clean bill of

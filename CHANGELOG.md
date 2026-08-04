@@ -92,8 +92,8 @@ it was changed.
 - **The version input is validated against the SemVer 2.0.0 grammar.** The
   previous pattern accepted `1.2.3-..` and `1.2.3-01` and rejected valid
   `1.2.3+build.1`.
-- New `fail-on-skipped` and `fail-on-uncontracted` inputs expose the coverage
-  gates to CI.
+- New `fail-on-skipped`, `fail-on-uncontracted` and `fail-on-unexercised`
+  inputs expose the coverage gates to CI.
 
 ### Honest reporting
 
@@ -139,7 +139,9 @@ it was changed.
 
 Ambiguous dotted paths (a literal `a.b` key collides with nested `a.b`), no
 root-type node, no per-enum-value counts, no map/wildcard redaction, and no
-manifest that can require full coverage. These need a versioned contract v2
+manifest of *expected* events (the gates cover committed contracts and observed
+events; an event that never got a contract and never appears in fixtures is
+invisible to both). These need a versioned contract v2
 with a migration and are not being rushed into a patch release. hookdrift
 remains an advisory tool: use it to surface evidence and focus review, not as
 the sole gate whose green run authorises production.
@@ -166,8 +168,11 @@ The first review's findings, all still in this release:
   files parsed, files skipped (with reasons), events observed, contracts
   checked, contracts unexercised, events uncontracted, and whether a directory
   argument made the run partial.
-- New **`--fail-on-skipped`** and **`--fail-on-uncontracted`** (with config
-  equivalents) turn coverage holes into failures. Defaults are unchanged.
+- New **`--fail-on-skipped`**, **`--fail-on-uncontracted`** and
+  **`--fail-on-unexercised`** (with config equivalents) turn coverage holes
+  into failures. Defaults are unchanged. The three together make a green run
+  mean "every fixture parsed, every event had a contract, every contract was
+  compared". Gate findings are deliberately not silenceable by ignore rules.
 
 ### Statistics match the evidence behind them
 
