@@ -3,36 +3,41 @@
   "provider": "shopify",
   "event": "checkouts_update",
   "samplesObserved": 24,
-  "firstSeen": "2026-08-02T17:22:18.225Z",
-  "lastUpdated": "2026-08-02T17:22:18.225Z",
+  "firstSeen": "2026-08-04T22:14:38.493Z",
+  "lastUpdated": "2026-08-04T22:14:38.493Z",
   "fields": {
     "abandoned_checkout_url": {
       "types": [
         "string"
       ],
       "presence": 1,
+      "containCount": 24,
       "format": "url"
     },
     "buyer_accepts_marketing": {
       "types": [
         "boolean"
       ],
-      "presence": 1
+      "presence": 1,
+      "containCount": 24
     },
     "cart_token": {
       "types": [
         "string"
       ],
-      "presence": 1
+      "presence": 1,
+      "containCount": 24
     },
     "closed_at": {
       "types": [],
       "presence": 1,
+      "containCount": 24,
       "nullable": true
     },
     "completed_at": {
       "types": [],
       "presence": 1,
+      "containCount": 24,
       "nullable": true
     },
     "created_at": {
@@ -40,75 +45,87 @@
         "string"
       ],
       "presence": 1,
+      "containCount": 24,
       "format": "iso8601"
     },
     "currency": {
       "types": [
         "string"
       ],
-      "presence": 1
+      "presence": 1,
+      "containCount": 24
     },
     "customer": {
       "types": [
         "object"
       ],
-      "presence": 1
+      "presence": 1,
+      "containCount": 24
     },
     "customer.created_at": {
       "types": [
         "string"
       ],
       "presence": 1,
+      "containCount": 24,
       "format": "iso8601"
     },
     "customer.currency": {
       "types": [
         "string"
       ],
-      "presence": 1
+      "presence": 1,
+      "containCount": 24
     },
     "customer.email": {
       "types": [
         "string"
       ],
       "presence": 1,
+      "containCount": 24,
       "format": "email"
     },
     "customer.first_name": {
       "types": [
         "string"
       ],
-      "presence": 1
+      "presence": 1,
+      "containCount": 24
     },
     "customer.id": {
       "types": [
         "number"
       ],
       "presence": 1,
+      "containCount": 24,
       "intOnly": true
     },
     "customer.last_name": {
       "types": [
         "string"
       ],
-      "presence": 1
+      "presence": 1,
+      "containCount": 24
     },
     "customer.state": {
       "types": [
         "string"
       ],
-      "presence": 1
+      "presence": 1,
+      "containCount": 24
     },
     "email": {
       "types": [
         "string"
       ],
       "presence": 1,
+      "containCount": 24,
       "format": "email"
     },
     "gateway": {
       "types": [],
       "presence": 1,
+      "containCount": 24,
       "nullable": true
     },
     "id": {
@@ -116,50 +133,58 @@
         "number"
       ],
       "presence": 1,
+      "containCount": 24,
       "intOnly": true
     },
     "landing_site": {
       "types": [
         "string"
       ],
-      "presence": 1
+      "presence": 1,
+      "containCount": 24
     },
     "line_items": {
       "types": [
         "array"
       ],
-      "presence": 1
+      "presence": 1,
+      "containCount": 24
     },
     "line_items[]": {
       "types": [
         "object"
       ],
-      "presence": 1
+      "presence": 1,
+      "containCount": 24
     },
     "line_items[].gift_card": {
       "types": [
         "boolean"
       ],
-      "presence": 1
+      "presence": 1,
+      "containCount": 24
     },
     "line_items[].grams": {
       "types": [
         "number"
       ],
       "presence": 1,
+      "containCount": 24,
       "intOnly": true
     },
     "line_items[].key": {
       "types": [
         "string"
       ],
-      "presence": 1
+      "presence": 1,
+      "containCount": 24
     },
     "line_items[].price": {
       "types": [
         "string"
       ],
       "presence": 1,
+      "containCount": 24,
       "format": "numeric_string"
     },
     "line_items[].product_id": {
@@ -167,6 +192,7 @@
         "number"
       ],
       "presence": 1,
+      "containCount": 24,
       "intOnly": true
     },
     "line_items[].quantity": {
@@ -174,117 +200,137 @@
         "number"
       ],
       "presence": 1,
+      "containCount": 24,
       "intOnly": true
     },
     "line_items[].requires_shipping": {
       "types": [
         "boolean"
       ],
-      "presence": 1
+      "presence": 1,
+      "containCount": 24
     },
     "line_items[].sku": {
       "types": [
         "string"
       ],
-      "presence": 1
+      "presence": 1,
+      "containCount": 24
     },
     "line_items[].taxable": {
       "types": [
         "boolean"
       ],
-      "presence": 1
+      "presence": 1,
+      "containCount": 24
     },
     "line_items[].title": {
       "types": [
         "string"
       ],
-      "presence": 1
+      "presence": 1,
+      "containCount": 24
     },
     "line_items[].variant_id": {
       "types": [
         "number"
       ],
       "presence": 1,
+      "containCount": 24,
       "intOnly": true
     },
     "line_items[].variant_title": {
       "types": [
         "string"
       ],
-      "presence": 1
+      "presence": 1,
+      "containCount": 24
     },
     "line_items[].vendor": {
       "types": [
         "string"
       ],
-      "presence": 1
+      "presence": 1,
+      "containCount": 24
     },
     "note": {
       "types": [],
       "presence": 1,
+      "containCount": 24,
       "nullable": true
     },
     "phone": {
       "types": [],
       "presence": 1,
+      "containCount": 24,
       "nullable": true
     },
     "presentment_currency": {
       "types": [
         "string"
       ],
-      "presence": 1
+      "presence": 1,
+      "containCount": 24
     },
     "shipping_address": {
       "types": [
         "object"
       ],
-      "presence": 1
+      "presence": 1,
+      "containCount": 24
     },
     "shipping_address.address1": {
       "types": [
         "string"
       ],
-      "presence": 1
+      "presence": 1,
+      "containCount": 24
     },
     "shipping_address.city": {
       "types": [
         "string"
       ],
-      "presence": 1
+      "presence": 1,
+      "containCount": 24
     },
     "shipping_address.country": {
       "types": [
         "string"
       ],
-      "presence": 1
+      "presence": 1,
+      "containCount": 24
     },
     "shipping_address.first_name": {
       "types": [
         "string"
       ],
-      "presence": 1
+      "presence": 1,
+      "containCount": 24
     },
     "shipping_address.last_name": {
       "types": [
         "string"
       ],
-      "presence": 1
+      "presence": 1,
+      "containCount": 24
     },
     "shipping_address.phone": {
       "types": [],
       "presence": 1,
+      "containCount": 24,
       "nullable": true
     },
     "shipping_address.province": {
       "types": [
         "string"
       ],
-      "presence": 1
+      "presence": 1,
+      "containCount": 24
     },
     "shipping_address.province_code": {
       "types": [],
       "presence": 1,
+      "containCount": 24,
       "nullable": true
     },
     "shipping_address.zip": {
@@ -292,32 +338,37 @@
         "string"
       ],
       "presence": 1,
+      "containCount": 24,
       "format": "numeric_string"
     },
     "source_name": {
       "types": [
         "string"
       ],
-      "presence": 1
+      "presence": 1,
+      "containCount": 24
     },
     "subtotal_price": {
       "types": [
         "string"
       ],
       "presence": 1,
+      "containCount": 24,
       "format": "numeric_string"
     },
     "token": {
       "types": [
         "string"
       ],
-      "presence": 1
+      "presence": 1,
+      "containCount": 24
     },
     "total_discounts": {
       "types": [
         "string"
       ],
       "presence": 1,
+      "containCount": 24,
       "format": "numeric_string"
     },
     "total_line_items_price": {
@@ -325,6 +376,7 @@
         "string"
       ],
       "presence": 1,
+      "containCount": 24,
       "format": "numeric_string"
     },
     "total_price": {
@@ -332,6 +384,7 @@
         "string"
       ],
       "presence": 1,
+      "containCount": 24,
       "format": "numeric_string"
     },
     "total_tax": {
@@ -339,6 +392,7 @@
         "string"
       ],
       "presence": 1,
+      "containCount": 24,
       "format": "numeric_string"
     },
     "updated_at": {
@@ -346,6 +400,7 @@
         "string"
       ],
       "presence": 1,
+      "containCount": 24,
       "format": "iso8601"
     }
   }

@@ -3,14 +3,15 @@
   "provider": "stripe",
   "event": "charge.succeeded",
   "samplesObserved": 36,
-  "firstSeen": "2026-08-01T17:42:11.299Z",
-  "lastUpdated": "2026-08-01T17:42:11.299Z",
+  "firstSeen": "2026-08-04T22:14:37.704Z",
+  "lastUpdated": "2026-08-04T22:14:37.704Z",
   "fields": {
     "api_version": {
       "types": [
         "string"
       ],
       "presence": 1,
+      "containCount": 36,
       "format": "iso8601",
       "enum": [
         "2026-06-30"
@@ -22,6 +23,7 @@
         "number"
       ],
       "presence": 1,
+      "containCount": 36,
       "format": "unix_seconds",
       "intOnly": true
     },
@@ -29,19 +31,22 @@
       "types": [
         "object"
       ],
-      "presence": 1
+      "presence": 1,
+      "containCount": 36
     },
     "data.object": {
       "types": [
         "object"
       ],
-      "presence": 1
+      "presence": 1,
+      "containCount": 36
     },
     "data.object.amount": {
       "types": [
         "number"
       ],
       "presence": 1,
+      "containCount": 36,
       "intOnly": true
     },
     "data.object.amount_captured": {
@@ -49,6 +54,7 @@
         "number"
       ],
       "presence": 1,
+      "containCount": 36,
       "intOnly": true
     },
     "data.object.amount_refunded": {
@@ -56,6 +62,7 @@
         "number"
       ],
       "presence": 1,
+      "containCount": 36,
       "intOnly": true
     },
     "data.object.balance_transaction": {
@@ -63,25 +70,29 @@
         "string"
       ],
       "presence": 1,
+      "containCount": 36,
       "format": "prefixed_id"
     },
     "data.object.billing_details": {
       "types": [
         "object"
       ],
-      "presence": 1
+      "presence": 1,
+      "containCount": 36
     },
     "data.object.billing_details.address": {
       "types": [
         "object"
       ],
-      "presence": 1
+      "presence": 1,
+      "containCount": 36
     },
     "data.object.billing_details.address.city": {
       "types": [
         "string"
       ],
       "presence": 1,
+      "containCount": 36,
       "enum": [
         "Berlin",
         "London",
@@ -94,6 +105,7 @@
         "string"
       ],
       "presence": 1,
+      "containCount": 36,
       "enum": [
         "DE",
         "FR",
@@ -106,25 +118,29 @@
         "string"
       ],
       "presence": 1,
+      "containCount": 36,
       "format": "email"
     },
     "data.object.billing_details.name": {
       "types": [
         "string"
       ],
-      "presence": 1
+      "presence": 1,
+      "containCount": 36
     },
     "data.object.captured": {
       "types": [
         "boolean"
       ],
-      "presence": 1
+      "presence": 1,
+      "containCount": 36
     },
     "data.object.created": {
       "types": [
         "number"
       ],
       "presence": 1,
+      "containCount": 36,
       "format": "unix_seconds",
       "intOnly": true
     },
@@ -133,6 +149,7 @@
         "string"
       ],
       "presence": 1,
+      "containCount": 36,
       "enum": [
         "eur",
         "gbp",
@@ -145,6 +162,7 @@
         "string"
       ],
       "presence": 1,
+      "containCount": 36,
       "format": "prefixed_id"
     },
     "data.object.description": {
@@ -152,22 +170,26 @@
         "string"
       ],
       "presence": 1,
+      "containCount": 36,
       "nullable": true
     },
     "data.object.disputed": {
       "types": [
         "boolean"
       ],
-      "presence": 1
+      "presence": 1,
+      "containCount": 36
     },
     "data.object.failure_code": {
       "types": [],
       "presence": 1,
+      "containCount": 36,
       "nullable": true
     },
     "data.object.failure_message": {
       "types": [],
       "presence": 1,
+      "containCount": 36,
       "nullable": true
     },
     "data.object.id": {
@@ -175,25 +197,29 @@
         "string"
       ],
       "presence": 1,
+      "containCount": 36,
       "format": "prefixed_id"
     },
     "data.object.livemode": {
       "types": [
         "boolean"
       ],
-      "presence": 1
+      "presence": 1,
+      "containCount": 36
     },
     "data.object.metadata": {
       "types": [
         "object"
       ],
-      "presence": 1
+      "presence": 1,
+      "containCount": 36
     },
     "data.object.object": {
       "types": [
         "string"
       ],
       "presence": 1,
+      "containCount": 36,
       "enum": [
         "charge"
       ],
@@ -203,13 +229,15 @@
       "types": [
         "object"
       ],
-      "presence": 1
+      "presence": 1,
+      "containCount": 36
     },
     "data.object.outcome.network_status": {
       "types": [
         "string"
       ],
       "presence": 1,
+      "containCount": 36,
       "enum": [
         "approved_by_network"
       ],
@@ -218,6 +246,7 @@
     "data.object.outcome.reason": {
       "types": [],
       "presence": 1,
+      "containCount": 36,
       "nullable": true
     },
     "data.object.outcome.risk_level": {
@@ -225,6 +254,7 @@
         "string"
       ],
       "presence": 1,
+      "containCount": 36,
       "enum": [
         "normal"
       ],
@@ -235,6 +265,7 @@
         "string"
       ],
       "presence": 1,
+      "containCount": 36,
       "enum": [
         "Payment complete."
       ],
@@ -245,6 +276,7 @@
         "string"
       ],
       "presence": 1,
+      "containCount": 36,
       "enum": [
         "authorized"
       ],
@@ -254,13 +286,15 @@
       "types": [
         "boolean"
       ],
-      "presence": 1
+      "presence": 1,
+      "containCount": 36
     },
     "data.object.payment_intent": {
       "types": [
         "string"
       ],
       "presence": 1,
+      "containCount": 36,
       "format": "prefixed_id"
     },
     "data.object.payment_method": {
@@ -268,25 +302,29 @@
         "string"
       ],
       "presence": 1,
+      "containCount": 36,
       "format": "prefixed_id"
     },
     "data.object.payment_method_details": {
       "types": [
         "object"
       ],
-      "presence": 1
+      "presence": 1,
+      "containCount": 36
     },
     "data.object.payment_method_details.card": {
       "types": [
         "object"
       ],
-      "presence": 1
+      "presence": 1,
+      "containCount": 36
     },
     "data.object.payment_method_details.card.brand": {
       "types": [
         "string"
       ],
       "presence": 1,
+      "containCount": 36,
       "enum": [
         "amex",
         "mastercard",
@@ -299,6 +337,7 @@
         "string"
       ],
       "presence": 1,
+      "containCount": 36,
       "enum": [
         "US"
       ],
@@ -309,6 +348,7 @@
         "string"
       ],
       "presence": 1,
+      "containCount": 36,
       "format": "numeric_string"
     },
     "data.object.payment_method_details.type": {
@@ -316,6 +356,7 @@
         "string"
       ],
       "presence": 1,
+      "containCount": 36,
       "enum": [
         "card"
       ],
@@ -326,6 +367,7 @@
         "string"
       ],
       "presence": 1,
+      "containCount": 36,
       "nullable": true,
       "format": "email"
     },
@@ -334,19 +376,22 @@
         "string"
       ],
       "presence": 1,
+      "containCount": 36,
       "format": "url"
     },
     "data.object.refunded": {
       "types": [
         "boolean"
       ],
-      "presence": 1
+      "presence": 1,
+      "containCount": 36
     },
     "data.object.status": {
       "types": [
         "string"
       ],
       "presence": 1,
+      "containCount": 36,
       "enum": [
         "succeeded"
       ],
@@ -357,19 +402,22 @@
         "string"
       ],
       "presence": 1,
+      "containCount": 36,
       "format": "prefixed_id"
     },
     "livemode": {
       "types": [
         "boolean"
       ],
-      "presence": 1
+      "presence": 1,
+      "containCount": 36
     },
     "object": {
       "types": [
         "string"
       ],
       "presence": 1,
+      "containCount": 36,
       "enum": [
         "event"
       ],
@@ -380,24 +428,28 @@
         "number"
       ],
       "presence": 1,
+      "containCount": 36,
       "intOnly": true
     },
     "request": {
       "types": [
         "object"
       ],
-      "presence": 1
+      "presence": 1,
+      "containCount": 36
     },
     "request.id": {
       "types": [
         "string"
       ],
       "presence": 1,
+      "containCount": 36,
       "format": "prefixed_id"
     },
     "request.idempotency_key": {
       "types": [],
       "presence": 1,
+      "containCount": 36,
       "nullable": true
     },
     "type": {
@@ -405,6 +457,7 @@
         "string"
       ],
       "presence": 1,
+      "containCount": 36,
       "enum": [
         "charge.succeeded"
       ],

@@ -3,205 +3,237 @@
   "provider": "github",
   "event": "push",
   "samplesObserved": 5,
-  "firstSeen": "2026-08-01T17:42:11.304Z",
-  "lastUpdated": "2026-08-01T17:42:11.304Z",
+  "firstSeen": "2026-08-04T22:14:37.710Z",
+  "lastUpdated": "2026-08-04T22:14:37.710Z",
   "fields": {
     "after": {
       "types": [
         "string"
       ],
-      "presence": 1
+      "presence": 1,
+      "containCount": 5
     },
     "before": {
       "types": [
         "string"
       ],
-      "presence": 1
+      "presence": 1,
+      "containCount": 5
     },
     "commits": {
       "types": [
         "array"
       ],
-      "presence": 1
+      "presence": 1,
+      "containCount": 5
     },
     "commits[]": {
       "types": [
         "object"
       ],
-      "presence": 1
+      "presence": 1,
+      "containCount": 5
     },
     "commits[].author": {
       "types": [
         "object"
       ],
-      "presence": 1
+      "presence": 1,
+      "containCount": 5
     },
     "commits[].author.email": {
       "types": [
         "string"
       ],
       "presence": 1,
+      "containCount": 5,
       "format": "email"
     },
     "commits[].author.name": {
       "types": [
         "string"
       ],
-      "presence": 1
+      "presence": 1,
+      "containCount": 5
     },
     "commits[].id": {
       "types": [
         "string"
       ],
-      "presence": 1
+      "presence": 1,
+      "containCount": 5
     },
     "commits[].message": {
       "types": [
         "string"
       ],
-      "presence": 1
+      "presence": 1,
+      "containCount": 5
     },
     "commits[].timestamp": {
       "types": [
         "string"
       ],
       "presence": 1,
+      "containCount": 5,
       "format": "iso8601"
     },
     "created": {
       "types": [
         "boolean"
       ],
-      "presence": 1
+      "presence": 1,
+      "containCount": 5
     },
     "deleted": {
       "types": [
         "boolean"
       ],
-      "presence": 1
+      "presence": 1,
+      "containCount": 5
     },
     "forced": {
       "types": [
         "boolean"
       ],
-      "presence": 1
+      "presence": 1,
+      "containCount": 5
     },
     "head_commit": {
       "types": [
         "object"
       ],
-      "presence": 1
+      "presence": 1,
+      "containCount": 5
     },
     "head_commit.author": {
       "types": [
         "object"
       ],
-      "presence": 1
+      "presence": 1,
+      "containCount": 5
     },
     "head_commit.author.email": {
       "types": [
         "string"
       ],
       "presence": 1,
+      "containCount": 5,
       "format": "email"
     },
     "head_commit.author.name": {
       "types": [
         "string"
       ],
-      "presence": 1
+      "presence": 1,
+      "containCount": 5
     },
     "head_commit.id": {
       "types": [
         "string"
       ],
-      "presence": 1
+      "presence": 1,
+      "containCount": 5
     },
     "head_commit.message": {
       "types": [
         "string"
       ],
-      "presence": 1
+      "presence": 1,
+      "containCount": 5
     },
     "head_commit.timestamp": {
       "types": [
         "string"
       ],
       "presence": 1,
+      "containCount": 5,
       "format": "iso8601"
     },
     "pusher": {
       "types": [
         "object"
       ],
-      "presence": 1
+      "presence": 1,
+      "containCount": 5
     },
     "pusher.email": {
       "types": [
         "string"
       ],
       "presence": 1,
+      "containCount": 5,
       "format": "email"
     },
     "pusher.name": {
       "types": [
         "string"
       ],
-      "presence": 1
+      "presence": 1,
+      "containCount": 5
     },
     "ref": {
       "types": [
         "string"
       ],
-      "presence": 1
+      "presence": 1,
+      "containCount": 5
     },
     "repository": {
       "types": [
         "object"
       ],
-      "presence": 1
+      "presence": 1,
+      "containCount": 5
     },
     "repository.full_name": {
       "types": [
         "string"
       ],
-      "presence": 1
+      "presence": 1,
+      "containCount": 5
     },
     "repository.id": {
       "types": [
         "number"
       ],
       "presence": 1,
+      "containCount": 5,
       "intOnly": true
     },
     "repository.name": {
       "types": [
         "string"
       ],
-      "presence": 1
+      "presence": 1,
+      "containCount": 5
     },
     "repository.owner": {
       "types": [
         "object"
       ],
-      "presence": 1
+      "presence": 1,
+      "containCount": 5
     },
     "repository.owner.email": {
       "types": [],
       "presence": 1,
+      "containCount": 5,
       "nullable": true
     },
     "repository.owner.name": {
       "types": [
         "string"
       ],
-      "presence": 1
+      "presence": 1,
+      "containCount": 5
     },
     "repository.private": {
       "types": [
         "boolean"
       ],
-      "presence": 1
+      "presence": 1,
+      "containCount": 5
     }
   }
 }

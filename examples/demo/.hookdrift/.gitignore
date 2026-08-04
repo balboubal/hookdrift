@@ -1,0 +1,3 @@
+# Contracts are meant to be committed. last-run.json is not: it is the
+# transient report of whichever `hookdrift check` ran most recently.
+last-run.json
