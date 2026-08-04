@@ -149,11 +149,19 @@ Commands: `init` · `infer [dir]` (`--rebuild` to allow narrowing) · `check [di
 ## GitHub Action
 
 ```yaml
-- uses: balboubal/hookdrift@v0.1.2
-  with:
-    strict: false
-    version: "0.1.2" # pin the CLI too; the default is `latest`
+permissions:
+  contents: read
+  pull-requests: write # required for the PR comment; omit to skip commenting
+
+steps:
+  - uses: actions/checkout@v4
+  - uses: balboubal/hookdrift@v0.1.3
+    with:
+      strict: false
+      version: "0.1.3" # exact CLI version; pinning keeps a green commit green
 ```
+
+Pin the action by tag (or commit SHA in high-assurance setups) and pin `version` to an exact release — the CLI version is what determines the result, and an unpinned one lets a passing commit run different code later. On fork pull requests the token is read-only, so the comment step is skipped without failing the job; the check's exit code still decides the outcome.
 
 Posts **one** PR comment, updated in place on re-runs. No findings → no comment. If a previous run reported drift that is now resolved, the existing comment is updated to say so.
 

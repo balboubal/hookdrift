@@ -12,8 +12,8 @@ inputs:
     description: "Directory containing hookdrift.config.json"
     default: "."
   version:
-    description: "hookdrift npm version to run"
-    default: "latest"
+    description: "hookdrift npm version to run. Pinned by default so a green commit cannot silently run different code later."
+    default: "0.1.3"
 
 runs:
   using: "composite"
@@ -22,15 +22,39 @@ runs:
       id: check
       shell: bash
       working-directory: ${{ inputs.working-directory }}
+      # Inputs reach the script as environment variables, never interpolated
+      # into the command line: an expression wired to branch or matrix data
+      # would otherwise let shell metacharacters become command syntax.
+      env:
+        HOOKDRIFT_VERSION: ${{ inputs.version }}
+        HOOKDRIFT_STRICT: ${{ inputs.strict }}
       run: |
         set +e
-        npx -y hookdrift@${{ inputs.version }} check ${{ inputs.strict == 'true' && '--strict' || '' }} --json > "$RUNNER_TEMP/hookdrift-report.json"
+        if ! printf '%s' "$HOOKDRIFT_VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$|^latest$'; then
+          echo "hookdrift-action: refusing to run: 'version' must be an exact semver or 'latest', got '$HOOKDRIFT_VERSION'" >&2
+          exit 2
+        fi
+        STRICT_FLAG=""
+        [ "$HOOKDRIFT_STRICT" = "true" ] && STRICT_FLAG="--strict"
+        npx -y "hookdrift@$HOOKDRIFT_VERSION" check $STRICT_FLAG --json > "$RUNNER_TEMP/hookdrift-report.json"
         echo "exit_code=$?" >> "$GITHUB_OUTPUT"
-        npx -y hookdrift@${{ inputs.version }} impact > "$RUNNER_TEMP/hookdrift-impact.txt" 2>&1 || true
+        # Advisory: never fails the job, but a crash must not masquerade as a
+        # code-reference report in the PR comment.
+        if npx -y "hookdrift@$HOOKDRIFT_VERSION" impact > "$RUNNER_TEMP/hookdrift-impact.txt" 2>"$RUNNER_TEMP/hookdrift-impact.err"; then
+          echo "impact_ok=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "impact_ok=false" >> "$GITHUB_OUTPUT"
+        fi
 
+    # Requires `permissions: pull-requests: write` in the calling workflow.
+    # continue-on-error: a fork PR gets a read-only token and the comment call
+    # 403s; that must not hide the check result, which the final step exits on.
     - name: Post or update the PR comment
       if: github.event_name == 'pull_request'
+      continue-on-error: true
       uses: actions/github-script@v9
+      env:
+        HOOKDRIFT_IMPACT_OK: ${{ steps.check.outputs.impact_ok }}
       with:
         script: |
           const fs = require('fs');
@@ -45,10 +69,29 @@ runs:
           }
           const findings = report.findings || [];
           const active = findings.filter(f => !f.suppressed);
-          const { data: comments } = await github.rest.issues.listComments({
+
+          // Findings carry provider-controlled strings (event names, paths,
+          // enum values). Rendered raw they can close a code span, forge
+          // headings, mention teams, or bury adjacent findings. Escape and
+          // bound every payload-derived value.
+          const safe = (v) => {
+            let s = String(v ?? '');
+            s = s.replace(/[\x00-\x1f\x7f]/g, ''); // control chars
+            if (s.length > 300) s = s.slice(0, 300) + '…(truncated)';
+            return s
+              .replace(/[\\`*_{}\[\]()#+\-.!|<>~]/g, m => '\\' + m)
+              .replace(/@/g, '@<!---->'); // neutralise mentions
+          };
+          const code = (v) => '`' + String(v ?? '').replace(/[\x00-\x1f\x7f]/g, '').replace(/`/g, "'").slice(0, 200) + '`';
+
+          // Paginate: on a busy PR the marker comment can sit past the first
+          // page, which produced a duplicate bot comment on every run.
+          const comments = await github.paginate(github.rest.issues.listComments, {
             ...context.repo, issue_number: context.issue.number, per_page: 100,
           });
-          const existing = comments.find(c => c.body && c.body.includes(marker));
+          const existing = comments.find(c =>
+            c.body && c.body.includes(marker) &&
+            (c.user?.type === 'Bot' || c.performed_via_github_app));
 
           // A failing check with no findings means it checked NOTHING (bad
           // globs). Saying "resolved" there would tell the reviewer the exact
@@ -92,8 +135,8 @@ runs:
           let lastEvent = '';
           for (const f of listed) {
             const key = `${f.provider}/${f.event}`;
-            if (key !== lastEvent) { body += `**\`${key}\`**\n`; lastEvent = key; }
-            body += `- ${icon[f.severity]} **${f.severity}** \`${f.path || '(event)'}\` - ${f.message}\n`;
+            if (key !== lastEvent) { body += `**${code(key)}**\n`; lastEvent = key; }
+            body += `- ${icon[f.severity]} **${f.severity}** ${code(f.path || '(event)')} - ${safe(f.message)}\n`;
           }
           if (listed.length === 0) {
             body += `No breaking or warning findings.\n`;
@@ -102,8 +145,12 @@ runs:
           body += `\n${counts.BREAKING} breaking, ${counts.WARNING} warning(s), ${counts.INFO} info` +
                   (suppressed ? ` (${suppressed} suppressed by ignore rules)` : '') + '\n';
 
+          // Only render impact output when impact actually succeeded; its
+          // crash text used to be shown inside the "Code references" fence.
           let impact = '';
-          try { impact = fs.readFileSync(path.join(process.env.RUNNER_TEMP, 'hookdrift-impact.txt'), 'utf8'); } catch {}
+          if (process.env.HOOKDRIFT_IMPACT_OK === 'true') {
+            try { impact = fs.readFileSync(path.join(process.env.RUNNER_TEMP, 'hookdrift-impact.txt'), 'utf8'); } catch {}
+          }
           if (counts.INFO > 0 || impact.trim()) {
             body += `\n<details><summary>Details</summary>\n\n`;
             if (counts.INFO > 0) {
