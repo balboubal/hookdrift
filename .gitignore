@@ -6,6 +6,12 @@ dist/
 # Local working notes - parked findings/suggestions, not part of the project.
 NOTES.local.md
 
+# Debris from a broken PowerShell command shim on the dev machine that writes
+# its error output into files named after the invoked command.
+/npm
+/vitest
+/hookdrift@*
+
 # Contracts are meant to be committed; last-run.json is not. It is transient
 # output rewritten with a fresh timestamp by every `check`, so committing it
 # means the working tree goes dirty just from running the tool.
