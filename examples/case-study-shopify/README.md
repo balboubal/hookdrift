@@ -16,7 +16,7 @@ rm -rf .hookdrift                        # step 0: this repo ships the resulting
                                          # Remove-Item -Recurse -Force .hookdrift)
 node generate.mjs                        # writes all three fixture batches
 
-npx hookdrift infer fixtures-before      # contract from payloads that all carry `id`
+npx hookdrift infer fixtures-before --rebuild   # contract from payloads that all carry `id`
 npx hookdrift check fixtures-after       # the incident: id missing from 7 of 24  -> WARNING, exit 0
 npx hookdrift check fixtures-after --strict   # same finding, exit 1
 npx hookdrift check fixtures-total       # contrast: id missing from all 24       -> BREAKING, exit 1
