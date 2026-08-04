@@ -1,4 +1,5 @@
-import { writeFileSync, mkdirSync } from "node:fs";
+import { mkdirSync } from "node:fs";
+import { randomUUID } from "node:crypto";
 import { join, relative, resolve } from "node:path";
 import { globSync } from "tinyglobby";
 import type { Finding } from "../types.js";
@@ -8,6 +9,7 @@ import { observe } from "../core/observe.js";
 import { contractPath, loadContract, writeFileAtomic } from "../core/contract.js";
 import { diffContract } from "../core/diff.js";
 import { matchIgnore } from "../core/ignore.js";
+import { plain } from "../core/text.js";
 
 export interface CheckOptions {
   cwd: string;
@@ -44,6 +46,12 @@ export interface Coverage {
 }
 
 export interface LastRun {
+  /**
+   * Identifies this specific report. `impact` re-reads the file before writing
+   * its references back and refuses to write if the id changed, so a check that
+   * landed while impact was scanning is not overwritten by the older run.
+   */
+  runId: string;
   ranAt: string;
   strict: boolean;
   exitCode: number;
@@ -69,12 +77,15 @@ export function formatFinding(f: Finding, color: boolean): string {
   }
   const pad = color ? 18 : 9;
   const note = f.suppressed
-    ? `  [suppressed${f.suppressReason ? `: ${f.suppressReason}` : ""}]`
+    ? `  [suppressed${f.suppressReason ? `: ${plain(f.suppressReason)}` : ""}]`
     : "";
-  const lines = [`${sev.padEnd(pad)} ${f.path}  ${f.message}${note}`];
+  // Paths and messages carry provider-controlled text. Terminals act on control
+  // and bidi bytes, so they are stripped from every human channel; --json keeps
+  // the raw values.
+  const lines = [`${sev.padEnd(pad)} ${plain(f.path)}  ${plain(f.message)}${note}`];
   if (f.refs?.length) {
     lines.push("          referenced in:");
-    for (const r of f.refs) lines.push(`            ${r.file}:${r.line}`);
+    for (const r of f.refs) lines.push(`            ${plain(r.file)}:${r.line}`);
   }
   return lines.join("\n");
 }
@@ -112,17 +123,20 @@ export function runCheck(opts: CheckOptions): number {
     );
     coverage.eventsObserved += batch.events.size;
     for (const [, s] of batch.events) coverage.filesParsed += s.length;
-    for (const s of batch.skipped) log(`  skipped ${s.file}: ${s.reason}`);
+    for (const s of batch.skipped) log(`  skipped ${plain(s.file)}: ${s.reason}`);
     for (const [event, samples] of [...batch.events.entries()].sort()) {
-      exercised.add(resolve(contractPath(contractsDir, provider, event)));
       // One unreadable contract must not abort the run: it used to throw out of
       // runCheck, losing every finding from every other contract - including
       // genuine BREAKING drift elsewhere - and leaving last-run.json stale so
       // explain/impact then reported the previous run as current health.
       // It is reported as its own BREAKING finding and the run continues.
+      // Resolving the path can itself throw (over-long or escaping identity),
+      // so it is inside the guard too.
       let contract;
       try {
-        contract = loadContract(contractPath(contractsDir, provider, event));
+        const file = contractPath(contractsDir, provider, event);
+        exercised.add(resolve(file));
+        contract = loadContract(file, { provider, event });
       } catch (e) {
         findings.push({
           provider,
@@ -148,11 +162,16 @@ export function runCheck(opts: CheckOptions): number {
         });
         continue;
       }
-      checked += 1;
       try {
-        findings.push(
-          ...diffContract(contract, observe(samples), { minSamples: config.minSamples }),
-        );
+        const results = diffContract(contract, observe(samples), {
+          minSamples: config.minSamples,
+        });
+        // Counted only once the comparison actually succeeded. Incrementing
+        // before the diff let a contract that threw still be reported as
+        // "checked", which is the one number a CI wrapper reads to decide
+        // whether coverage was real.
+        checked += 1;
+        findings.push(...results);
       } catch (e) {
         // e.g. a payload nested past MAX_DEPTH. Name the event instead of dying
         // with an unattributed stack overflow, and fail the run.
@@ -228,7 +247,7 @@ export function runCheck(opts: CheckOptions): number {
 
   // Persist for `explain` and `impact`.
   mkdirSync(contractsDir, { recursive: true });
-  const report: LastRun = { ranAt: now(), strict, exitCode, coverage, findings };
+  const report: LastRun = { runId: randomUUID(), ranAt: now(), strict, exitCode, coverage, findings };
   writeFileAtomic(join(contractsDir, "last-run.json"), JSON.stringify(report, null, 2) + "\n");
 
   if (json) {
@@ -256,7 +275,7 @@ export function runCheck(opts: CheckOptions): number {
   } else {
     let lastEvent = "";
     for (const f of toShow) {
-      const key = `${f.provider}/${f.event}`;
+      const key = plain(`${f.provider}/${f.event}`);
       if (key !== lastEvent) {
         log(`\n${key}`);
         lastEvent = key;

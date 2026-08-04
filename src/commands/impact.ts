@@ -1,9 +1,11 @@
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { globSync } from "tinyglobby";
 import type { Finding } from "../types.js";
 import { loadConfig } from "../core/config.js";
+import { writeFileAtomic } from "../core/contract.js";
 import { formatFinding, type LastRun } from "./check.js";
+import { plain } from "../core/text.js";
 
 const MAX_REFS_PER_FINDING = 10;
 
@@ -137,11 +139,29 @@ export function runImpact(
     }
   }
 
-  writeFileSync(runFile, JSON.stringify(run, null, 2) + "\n", "utf8");
+  // Compare-and-swap. impact reads the report, spends real time scanning
+  // source, then writes it back - so a `check` that finished in between was
+  // silently reverted, restoring an old failing report over a newer clean one
+  // (and vice versa). Re-read and only write if this is still the same run.
+  let current: LastRun | null = null;
+  try {
+    current = JSON.parse(readFileSync(runFile, "utf8")) as LastRun;
+  } catch {
+    current = null;
+  }
+  if (!current || current.runId !== run.runId) {
+    log(
+      `\nA newer \`hookdrift check\` finished while this scan was running, so the code ` +
+        `references below were not saved to last-run.json - the run they describe is no ` +
+        `longer current. Re-run \`hookdrift impact\`.`,
+    );
+  } else {
+    writeFileAtomic(runFile, JSON.stringify(run, null, 2) + "\n");
+  }
 
   let lastEvent = "";
   for (const f of targets) {
-    const key = `${f.provider}/${f.event}`;
+    const key = plain(`${f.provider}/${f.event}`);
     if (key !== lastEvent) {
       log(`\n${key}`);
       lastEvent = key;
