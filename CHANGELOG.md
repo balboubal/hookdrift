@@ -2,7 +2,7 @@
 
 Notable changes per release. Dates are the publish date.
 
-## 0.1.3 — unreleased
+## 0.1.3 — 2026-08-05
 
 Response to two external production-readiness reviews, the second adversarial
 and aimed at the fixes from the first. Every item below was reproduced before
