@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { loadConfig, writeDefaultConfig, CONFIG_FILE } from "../core/config.js";
 import { formatFinding, type LastRun } from "./check.js";
+import { plain } from "../core/text.js";
 
 export function runInit(cwd: string, log: (l: string) => void = console.log): number {
   const file = writeDefaultConfig(cwd);
@@ -34,14 +35,17 @@ export function runExplain(cwd: string, log: (l: string) => void = console.log):
   }
   let lastEvent = "";
   for (const f of run.findings) {
-    const key = `${f.provider}/${f.event}`;
+    const key = f.provider || f.event ? plain(`${f.provider}/${f.event}`) : "(run)";
     if (key !== lastEvent) {
       log(`\n${key}`);
       lastEvent = key;
     }
     log("  " + formatFinding(f, false).split("\n").join("\n  "));
   }
-  return 0;
+  // Mirror the run being explained, as `impact` already does. Exiting 0 while
+  // printing BREAKING drift meant `hookdrift explain && deploy` deployed, and
+  // made explain the one command whose exit code disagreed with the others.
+  return run.exitCode;
 }
 
 export function usage(log: (l: string) => void = console.log): number {
@@ -59,12 +63,15 @@ Usage:
       --fail-on-uncontracted        fail if an event has no committed contract
   hookdrift impact                  map last check's findings to code references
       --strict                      warnings also cause a non-zero exit
-  hookdrift explain                 human-readable report of the last check
+  hookdrift explain                 re-print the last check (mirrors its exit code)
   hookdrift --version               print the installed version
 
 The two --fail-on flags also have config equivalents ("failOnSkipped",
 "failOnUncontracted"). Both default to off: a coverage hole is always reported
 in the "coverage" block of --json, but only fails the run when you ask it to.
+
+Exit codes: 0 = nothing that should fail a build; 1 = drift found, or the run
+checked nothing at all; 2 = bad usage or bad config (nothing ran).
 
 Contracts live in .hookdrift/<provider>/<event>.contract.json — commit them.
 hookdrift makes no network calls.`);

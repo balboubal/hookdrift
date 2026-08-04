@@ -33,7 +33,7 @@
 
   <text x="20" y="146" fill="#e6edf3" opacity="0">
     <animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.1857;0.2036;0.93;1" dur="14s" repeatCount="indefinite"/>
-    <tspan fill="#7ee787">$</tspan><tspan dx="8">npx hookdrift check ./fixtures</tspan><tspan fill="#8b949e" dx="16"># weeks later: fresh payloads</tspan>
+    <tspan fill="#7ee787">$</tspan><tspan dx="8">npx hookdrift check ./fixtures-drifted</tspan><tspan fill="#8b949e" dx="16"># weeks later: fresh payloads</tspan>
   </text>
   <text x="20" y="168" fill="#e6edf3" opacity="0">
     <animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.2429;0.2607;0.93;1" dur="14s" repeatCount="indefinite"/>

@@ -313,6 +313,43 @@ describe("coverage counts and command aliases", () => {
     expect(lastRun().findings[0]!.message).toMatch(/could not compare/);
   });
 
+  it("never claims health without naming the coverage hole", () => {
+    // 9 of 10 fixtures unreadable still printed a bare
+    // "OK 1 contract(s) checked - no unsuppressed drift." - a clean bill of
+    // health over a corpus that was 90% unchecked.
+    writeConfig();
+    fixture("0.json", { type: "e", a: 1 });
+    runInfer({ cwd, log: quiet, now });
+    for (let i = 1; i <= 9; i++) writeFileSync(join(cwd, "fx", `bad${i}.json`), "{truncated");
+
+    const clean: string[] = [];
+    expect(runCheck({ cwd, log: (l) => clean.push(l), now })).toBe(0);
+    expect(clean.join("\n")).toMatch(/OK 1 contract\(s\) checked.*9 of 10 matched fixture\(s\) could not be read/);
+    expect(clean.join("\n")).toMatch(/--fail-on-skipped/);
+
+    // The findings summary carries it too, not just the all-clear line.
+    fixture("0.json", { type: "e", b: 2 });
+    const drifted: string[] = [];
+    runCheck({ cwd, log: (l) => drifted.push(l), now });
+    expect(drifted.join("\n")).toMatch(/across 1 contract\(s\).*9 of 10 matched fixture\(s\)/);
+  });
+
+  it("names the directory argument when it is what matched nothing", () => {
+    // The README's headline workflow passes a directory; blaming only the
+    // globs sent the reader to fix the wrong thing.
+    writeConfig();
+    fixture("0.json", { type: "e", a: 1 });
+    runInfer({ cwd, log: quiet, now });
+    mkdirSync(join(cwd, "sub"), { recursive: true });
+
+    const lines: string[] = [];
+    expect(runCheck({ cwd, fixturesDir: "sub", log: (l) => lines.push(l), now })).toBe(1);
+    const out = lines.join("\n");
+    expect(out).toContain("fx/**/*.json"); // the globs it searched
+    expect(out).toContain('"sub"'); // and the argument that narrowed them
+    expect(out).toMatch(/filters those globs rather than widening/);
+  });
+
   it("rejects unknown flags on --version and help too", () => {
     writeConfig();
     expect(main(["--version", "--bogus"], cwd)).toBe(2);

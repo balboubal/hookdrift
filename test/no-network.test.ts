@@ -7,6 +7,7 @@ import net from "node:net";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { runInfer } from "../src/commands/infer.js";
 import { runCheck } from "../src/commands/check.js";
+import { runImpact } from "../src/commands/impact.js";
 import { runExplain, runInit } from "../src/commands/misc.js";
 
 /**
@@ -40,7 +41,7 @@ describe("no network calls, ever", () => {
     rmSync(cwd, { recursive: true, force: true });
   });
 
-  it("init → infer → check → check(drift) → explain completes offline", () => {
+  it("init → infer → check → check(drift) → impact → explain completes offline", () => {
     runInit(cwd, quiet);
     // Point the default config at local fixtures.
     writeFileSync(
@@ -48,7 +49,7 @@ describe("no network calls, ever", () => {
       JSON.stringify({
         contractsDir: ".hookdrift",
         providers: { stripe: { fixtures: "fx/**/*.json", eventPath: "type" } },
-        source: [],
+        source: ["src/**/*.ts"],
         strict: false,
       }),
     );
@@ -67,6 +68,10 @@ describe("no network calls, ever", () => {
       JSON.stringify({ type: "charge.succeeded", amount: "broken", currency: "usd" }),
     );
     expect(runCheck({ cwd, log: quiet })).toBe(1);
-    expect(runExplain(cwd, quiet)).toBe(0);
+    // impact reads source files off disk and re-writes the report - the README
+    // and SECURITY.md both say the guarantee covers every command, so it has to
+    // actually be exercised here.
+    expect(runImpact(cwd, quiet)).toBe(1);
+    expect(runExplain(cwd, quiet)).toBe(1);
   });
 });

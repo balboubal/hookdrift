@@ -81,7 +81,10 @@ describe("an unreadable contract is isolated, not fatal", () => {
   it("REGRESSION: explain and impact no longer report the stale green run as health", () => {
     runCheck({ cwd, log: quiet, now });
     const lines: string[] = [];
-    expect(runExplain(cwd, (l) => lines.push(l))).toBe(0);
+    // Both reporting commands mirror the run they describe. explain used to
+    // exit 0 here while impact exited 1 on the same report, so
+    // `hookdrift explain && deploy` deployed over BREAKING drift.
+    expect(runExplain(cwd, (l) => lines.push(l))).toBe(1);
     expect(lines.join("\n")).not.toContain("No drift detected");
     expect(runImpact(cwd, quiet)).toBe(1); // BREAKING present, even unmappable
   });

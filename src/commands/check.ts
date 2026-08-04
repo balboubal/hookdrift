@@ -89,6 +89,28 @@ export function formatFinding(f: Finding, color: boolean): string {
   return lines.join("\n");
 }
 
+/**
+ * The nothing-matched message used to blame the fixtures globs without ever
+ * mentioning the directory argument - and narrowing to a directory the globs do
+ * not cover is the README's headline upgrade workflow. `infer` names both.
+ */
+function nothingMatchedMessage(
+  config: { providers: Record<string, { fixtures: string }> },
+  fixturesDir?: string,
+): string {
+  const globs = Object.values(config.providers).map((pc) => pc.fixtures).join(", ");
+  return (
+    `No contracts checked and no fixtures matched.\n` +
+    `hookdrift looked for JSON files matching: ${globs || "(no providers configured)"}` +
+    (fixturesDir
+      ? `\n...restricted to "${fixturesDir}" by the directory argument, which filters those ` +
+        `globs rather than widening them - a directory they do not cover matches nothing.`
+      : "") +
+    `\nFix the "fixtures" glob(s) in hookdrift.config.json` +
+    (fixturesDir ? ` so they cover "${fixturesDir}", or drop the directory argument.` : ".")
+  );
+}
+
 export function runCheck(opts: CheckOptions): number {
   const { cwd, fixturesDir } = opts;
   const json = opts.json ?? false;
@@ -122,7 +144,9 @@ export function runCheck(opts: CheckOptions): number {
     );
     coverage.eventsObserved += batch.events.size;
     for (const [, s] of batch.events) coverage.filesParsed += s.length;
-    for (const s of batch.skipped) log(`  skipped ${plain(s.file)}: ${s.reason}`);
+    for (const s of batch.skipped) {
+      log(`  skipped ${plain(relative(cwd, s.file).replace(/\\/g, "/"))}: ${s.reason}`);
+    }
     for (const [event, samples] of [...batch.events.entries()].sort()) {
       // One unreadable contract must not abort the run: it used to throw out of
       // runCheck, losing every finding from every other contract - including
@@ -241,6 +265,14 @@ export function runCheck(opts: CheckOptions): number {
   // the silent-failure lie this tool exists to prevent, so fail loudly.
   // (Fixtures without contracts still produce uncontracted_event findings and
   // exit 0, so a first run before `infer` is unaffected.)
+  // "OK, no drift" over a corpus that mostly failed to parse is exactly the
+  // silent success this tool exists to prevent: 9 of 10 unreadable fixtures
+  // still printed a clean OK line. Every summary now carries the hole.
+  const skippedNote =
+    coverage.skipped.length > 0
+      ? ` (${coverage.skipped.length} of ${coverage.filesMatched} matched fixture(s) could not be read` +
+        `${failOnSkipped ? "" : "; --fail-on-skipped to fail on that"})`
+      : "";
   const nothingMatched = checked === 0 && findings.length === 0;
   const exitCode = nothingMatched || breaking > 0 || (strict && warning > 0) ? 1 : 0;
 
@@ -254,9 +286,7 @@ export function runCheck(opts: CheckOptions): number {
     // it would otherwise reach CI as exit 1 with an empty findings array and no
     // explanation anywhere. Diagnose on stderr, keeping stdout pure JSON.
     if (nothingMatched) {
-      log(
-        `No contracts checked and no fixtures matched - check the fixtures globs in hookdrift.config.json.`,
-      );
+      log(nothingMatchedMessage(config, fixturesDir));
     }
     (opts.log ?? console.log)(JSON.stringify(report, null, 2));
     return exitCode;
@@ -265,16 +295,16 @@ export function runCheck(opts: CheckOptions): number {
   const color = useColor();
   const toShow = opts.showSuppressed ? findings : active;
   if (nothingMatched) {
-    log(
-      `No contracts checked and no fixtures matched - check the fixtures globs in hookdrift.config.json.`,
-    );
+    log(nothingMatchedMessage(config, fixturesDir));
   } else if (toShow.length === 0) {
     const supNote = suppressed > 0 ? ` (${suppressed} suppressed)` : "";
-    log(`OK ${checked} contract(s) checked - no unsuppressed drift${supNote}.`);
+    log(`OK ${checked} contract(s) checked - no unsuppressed drift${supNote}.${skippedNote}`);
   } else {
     let lastEvent = "";
     for (const f of toShow) {
-      const key = plain(`${f.provider}/${f.event}`);
+      // Run-level findings (a skipped-fixture failure) have no provider or
+      // event, and rendered under a bare "/" heading.
+      const key = f.provider || f.event ? plain(`${f.provider}/${f.event}`) : "(run)";
       if (key !== lastEvent) {
         log(`\n${key}`);
         lastEvent = key;
@@ -283,7 +313,7 @@ export function runCheck(opts: CheckOptions): number {
     }
     const supNote = suppressed > 0 ? ` (${suppressed} suppressed)` : "";
     log(
-      `\n${breaking} breaking, ${warning} warning(s), ${info} info${supNote} across ${checked} contract(s)${strict ? " [strict]" : ""}`,
+      `\n${breaking} breaking, ${warning} warning(s), ${info} info${supNote} across ${checked} contract(s)${strict ? " [strict]" : ""}${skippedNote}`,
     );
     if (suppressed > 0 && !opts.showSuppressed) {
       log(`Run with --show-suppressed to see suppressed findings.`);

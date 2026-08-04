@@ -152,6 +152,8 @@ False-positive control is a design goal, not an afterthought:
 }
 ```
 
+The block above is annotated for readability — `hookdrift.config.json` is parsed as strict JSON, so drop the `//` comments if you paste it.
+
 Commands: `init` · `infer [dir]` (`--rebuild` to allow narrowing) · `check [dir]` (`--strict`, `--json`, `--show-suppressed`, `--fail-on-skipped`, `--fail-on-uncontracted`) · `impact` (`--strict`) · `explain`.
 
 ### Proving what a green run actually checked
@@ -186,7 +188,7 @@ Posts **one** PR comment, updated in place on re-runs. No findings → no commen
 
 - **Not webhook infrastructure.** No receiving, routing, queueing, retries, or replay — Hookdeck, Svix, and Convoy do that well. They monitor *delivery*; hookdrift monitors *shape*. A 200 response with a broken field looks healthy to them by design.
 - **Not a schema registry or contract-testing framework.** Pact needs cooperation from the producer; you do not control Stripe.
-- **Not a payload store.** Contracts contain field paths, types, formats and presence ratios rather than the values in your payloads — with two documented exceptions: **object keys become path segments** (so a map keyed by email or tenant id puts those keys in the contract), and **inferred enum values are stored verbatim**. Both are spelled out in [SECURITY.md](SECURITY.md); review contracts before committing if your payloads carry dynamic keys.
+- **Not a payload store.** Contracts contain field paths, types, formats and presence ratios rather than the values in your payloads — with three documented exceptions: **object keys become path segments** (so a map keyed by email or tenant id puts those keys in the contract), **inferred enum values are stored verbatim**, and **the event name is itself a payload value** read from `eventPath`. Both are spelled out in [SECURITY.md](SECURITY.md); review contracts before committing if your payloads carry dynamic keys.
 
 ## Honest limitations
 

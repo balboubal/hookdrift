@@ -95,6 +95,24 @@ it was changed.
 - New `fail-on-skipped` and `fail-on-uncontracted` inputs expose the coverage
   gates to CI.
 
+### Honest reporting
+
+- **A summary never claims health without naming the coverage hole.** With 9 of
+  10 fixtures unreadable, `check` printed a bare
+  `OK 1 contract(s) checked - no unsuppressed drift.` Both summary lines now
+  carry the skipped count and point at `--fail-on-skipped`.
+- **`explain` mirrors the exit code of the run it describes**, as `impact`
+  already did. It exited 0 while printing BREAKING drift, so
+  `hookdrift explain && deploy` deployed. *Behaviour change:* a script relying
+  on `explain` always exiting 0 will now see 1 when the last check failed.
+- **`check <dir>` that matches nothing names the directory argument.** It blamed
+  only the config globs, which is the wrong thing to fix when the argument was
+  what narrowed the run - and that is the README's headline upgrade workflow.
+- Skipped-fixture notices print repo-relative paths, matching `--json`.
+  Run-level findings render under `(run)` rather than a bare `/`.
+- Exit codes are documented in `--help`: 0 nothing to fail a build, 1 drift or
+  a run that checked nothing, 2 bad usage or config.
+
 ### Packaging and repository
 
 - `prepack` builds, so a clean checkout packs the CLI. Previously only
@@ -108,6 +126,14 @@ it was changed.
 - CI runs on Linux, Windows and macOS against Node 20 and 22. Contract filenames
   now depend on filesystem case-sensitivity and Windows reserved device names,
   so a Linux-only pass was no longer evidence.
+- `prepare` builds too, so `npm install github:balboubal/hookdrift` gets a
+  working binary instead of a package with no `dist/`.
+- The README demo image showed `check ./fixtures`, which reports no drift; the
+  output beside it comes from `check ./fixtures-drifted`. The image now shows
+  the command that produces it, and `examples/demo`, `examples/stripe-live` and
+  `examples/github-live` have READMEs explaining what they are.
+- The no-network test now exercises `impact`, which README and SECURITY.md both
+  claimed it covered.
 
 ### Known limits, unchanged
 
