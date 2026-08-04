@@ -343,10 +343,16 @@ const ContractZ = z
       } else if (f.enumAuthoritative) {
         bad([...at, "enumAuthoritative"], "enumAuthoritative set on a field with no enum");
       }
-      if (f.polymorphic && f.types.some((t) => t !== "string" && t !== "object")) {
+      // polymorphic marks a field that arrives as an ID string OR the expanded
+      // object, so both shapes must be recorded for the claim to mean anything.
+      // It does NOT mean those are the only types: a field can also have been
+      // seen as a number, and diff.ts deliberately treats such a third type as
+      // breaking while still honouring the string/object pair. Requiring
+      // exclusivity here rejected contracts `infer` itself writes.
+      if (f.polymorphic && !(f.types.includes("string") && f.types.includes("object"))) {
         bad(
           [...at, "polymorphic"],
-          `polymorphic marks the string/object expandable pair, but types are [${f.types.join(", ")}]`,
+          `polymorphic marks the string/object expandable pair, but types are [${f.types.join(", ")}] - both string and object must be present`,
         );
       }
     }

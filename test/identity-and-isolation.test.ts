@@ -198,6 +198,43 @@ describe("contract validation rejects self-contradictory files", () => {
     ).toThrow(/string\/object expandable pair/);
   });
 
+  it("accepts every contract infer itself writes", () => {
+    // The property that matters: validation must never reject the writer's own
+    // output. An earlier version of the polymorphic rule required types to be
+    // EXACTLY string+object, but looksPolymorphic() only requires both to be
+    // present - so a field seen as an ID string, an expanded object AND a
+    // number produced a contract that `infer` told you to commit, exited 0 on,
+    // and `check` then could not read. `--rebuild`, which the error message
+    // recommends, regenerated the same unreadable file.
+    writeConfig();
+    const corpora: object[][] = [
+      // Stripe-style expandable field that also arrives as a number.
+      [{ customer: "cus_NffrFeUfNV2Hib" }, { customer: { id: "cus_NffrFeUfNV2Hib" } }, { customer: 42 }],
+      // ...and as a boolean, and inside an array.
+      [{ ref: "ch_3MtwBwLkdIwHu7ix28a3tqPa" }, { ref: { id: "x" } }, { ref: true }],
+      [{ lines: ["cus_NffrFeUfNV2Hib", { id: "il_1" }, 42] }],
+      // Mixed everything at one path.
+      [{ v: "sub_1MowQVLkdIwHu7ixeRlqHVzs" }, { v: { a: 1 } }, { v: [1] }, { v: null }],
+    ];
+    for (const [i, payloads] of corpora.entries()) {
+      rmSync(join(cwd, "fx"), { recursive: true, force: true });
+      mkdirSync(join(cwd, "fx"), { recursive: true });
+      payloads.forEach((p, j) => fixture(`${j}.json`, { type: `e${i}`, ...p }));
+
+      expect(runInfer({ cwd, log: quiet, now })).toBe(0);
+      const file = join(cwd, ".hookdrift", "p", `e${i}.contract.json`);
+      expect(() => loadContract(file, { provider: "p", event: `e${i}` })).not.toThrow();
+    }
+    // And the whole set still checks cleanly against the corpus it came from.
+    expect(runCheck({ cwd, log: quiet, now })).toBe(0);
+  });
+
+  it("still rejects polymorphic without both shapes recorded", () => {
+    expect(() =>
+      loadContract(write({ x: { types: ["string", "number"], presence: 1, polymorphic: true } })),
+    ).toThrow(/both string and object must be present/);
+  });
+
   it("still accepts a contract written by the previous release", () => {
     // No containCount: pre-0.1.3 contracts must keep loading.
     const f = write({ x: { types: ["string"], presence: 0.5 } }, 10);
