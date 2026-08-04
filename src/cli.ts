@@ -29,6 +29,14 @@ const ALLOWED_FLAGS: Record<string, readonly string[]> = {
   check: ["--strict", "--json", "--show-suppressed", "--fail-on-skipped", "--fail-on-uncontracted"],
   impact: ["--strict"],
   explain: [],
+  // The aliases too, or `hookdrift --version --bogus` exits 0 and a user
+  // believes a flag was accepted that was never read.
+  "--version": [],
+  "-v": [],
+  version: [],
+  help: [],
+  "--help": [],
+  "-h": [],
 };
 const MAX_POSITIONAL: Record<string, number> = {
   init: 0,
@@ -36,6 +44,12 @@ const MAX_POSITIONAL: Record<string, number> = {
   check: 1,
   impact: 0,
   explain: 0,
+  "--version": 0,
+  "-v": 0,
+  version: 0,
+  help: 0,
+  "--help": 0,
+  "-h": 0,
 };
 
 export function main(argv: string[], cwd: string): number {
