@@ -6,6 +6,7 @@ import { plain } from "../core/text.js";
 import {
   buildContract,
   contractPath,
+  ensureContractsDir,
   loadContract,
   mergeContract,
   saveContract,
@@ -60,6 +61,8 @@ export function runInfer(opts: InferOptions): number {
         const contract = existing
           ? mergeContract(existing, obs, stamp)
           : buildContract(provider, event, obs, stamp);
+        // Lazily, so a run that matched nothing leaves no empty directory.
+        ensureContractsDir(contractsDir);
         saveContract(file, contract);
         wrote += 1;
         const verb = existing ? "updated" : rebuild ? "rebuilt" : "created";

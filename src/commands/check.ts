@@ -1,4 +1,3 @@
-import { mkdirSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import { join, relative, resolve } from "node:path";
 import { globSync } from "tinyglobby";
@@ -6,7 +5,7 @@ import type { Finding } from "../types.js";
 import { loadConfig } from "../core/config.js";
 import { loadFixtures } from "../core/fixtures.js";
 import { observe } from "../core/observe.js";
-import { contractPath, loadContract, writeFileAtomic } from "../core/contract.js";
+import { contractPath, ensureContractsDir, loadContract, writeFileAtomic } from "../core/contract.js";
 import { diffContract } from "../core/diff.js";
 import { matchIgnore } from "../core/ignore.js";
 import { plain } from "../core/text.js";
@@ -246,7 +245,7 @@ export function runCheck(opts: CheckOptions): number {
   const exitCode = nothingMatched || breaking > 0 || (strict && warning > 0) ? 1 : 0;
 
   // Persist for `explain` and `impact`.
-  mkdirSync(contractsDir, { recursive: true });
+  ensureContractsDir(contractsDir);
   const report: LastRun = { runId: randomUUID(), ranAt: now(), strict, exitCode, coverage, findings };
   writeFileAtomic(join(contractsDir, "last-run.json"), JSON.stringify(report, null, 2) + "\n");
 

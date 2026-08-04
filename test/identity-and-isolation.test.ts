@@ -284,6 +284,30 @@ describe("coverage counts and command aliases", () => {
     expect(main(["help"], cwd)).toBe(0);
   });
 
+  it("keeps last-run.json out of the commit the README tells you to make", () => {
+    // README: `git add .hookdrift && git commit`. That directory holds both the
+    // contracts (meant to be committed) and the transient report of the last
+    // check (not), so the documented command committed a file that then
+    // reappeared dirty after every subsequent run.
+    writeConfig();
+    fixture("0.json", { type: "e", a: 1 });
+    runInfer({ cwd, log: quiet, now });
+    const ignore = join(cwd, ".hookdrift", ".gitignore");
+    expect(existsSync(ignore)).toBe(true);
+    expect(readFileSync(ignore, "utf8")).toMatch(/^last-run\.json$/m);
+
+    // An existing rule is never clobbered.
+    writeFileSync(ignore, "mine\n");
+    runCheck({ cwd, log: quiet, now });
+    expect(readFileSync(ignore, "utf8")).toBe("mine\n");
+  });
+
+  it("leaves no directory behind when a run matches nothing", () => {
+    writeConfig({ providers: { p: { fixtures: "nothing/**/*.json", eventPath: "type" } } });
+    expect(runInfer({ cwd, log: quiet, now })).toBe(1);
+    expect(existsSync(join(cwd, ".hookdrift"))).toBe(false);
+  });
+
   it("gives every check report a distinct runId", () => {
     writeConfig();
     fixture("0.json", { type: "e", a: 1 });

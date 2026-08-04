@@ -414,3 +414,27 @@ export function writeFileAtomic(file: string, data: string): void {
 export function saveContract(file: string, contract: Contract): void {
   writeFileAtomic(file, JSON.stringify(contract, null, 2) + "\n");
 }
+
+/**
+ * Create the contracts directory, and seed it with a .gitignore for
+ * last-run.json the first time.
+ *
+ * The README tells you to `git add .hookdrift` - contracts are meant to be
+ * committed - but that directory also holds the transient report of whoever ran
+ * `check` last, which then reappears as a dirty file after every subsequent
+ * run. Shipping the rule beside the files it applies to means the documented
+ * command does the right thing without the user having to know this.
+ * An existing .gitignore is never overwritten.
+ */
+export function ensureContractsDir(contractsDir: string): void {
+  mkdirSync(contractsDir, { recursive: true });
+  const ignore = join(contractsDir, ".gitignore");
+  if (existsSync(ignore)) return;
+  writeFileSync(
+    ignore,
+    "# Contracts are meant to be committed. last-run.json is not: it is the\n" +
+      "# transient report of whichever `hookdrift check` ran most recently.\n" +
+      "last-run.json\n",
+    "utf8",
+  );
+}
