@@ -76,10 +76,14 @@ runs:
           // bound every payload-derived value.
           const safe = (v) => {
             let s = String(v ?? '');
-            s = s.replace(/[\x00-\x1f\x7f]/g, ''); // control chars
+            // Newlines are what let payload text start a heading or list item,
+            // so findings are collapsed to one line first; then only the
+            // characters that can inject in this position are escaped, which
+            // keeps ordinary messages readable.
+            s = s.replace(/[\x00-\x1f\x7f]/g, ' ').replace(/\s+/g, ' ').trim();
             if (s.length > 300) s = s.slice(0, 300) + '…(truncated)';
             return s
-              .replace(/[\\`*_{}\[\]()#+\-.!|<>~]/g, m => '\\' + m)
+              .replace(/[\\`*_\[\]|<>~#]/g, m => '\\' + m)
               .replace(/@/g, '@<!---->'); // neutralise mentions
           };
           const code = (v) => '`' + String(v ?? '').replace(/[\x00-\x1f\x7f]/g, '').replace(/`/g, "'").slice(0, 200) + '`';

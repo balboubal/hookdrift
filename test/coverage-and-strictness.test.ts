@@ -147,6 +147,29 @@ describe("the report proves what was checked", () => {
   });
 });
 
+describe("dynamic object keys are surfaced before they are committed", () => {
+  it("warns when contract paths look like payload data", () => {
+    writeConfig();
+    fixtures([
+      { usersByEmail: { "alice@example.invalid": 1 }, tokens: { sk_live_AAAAAAAAAAAAAAAA: true } },
+    ]);
+    const lines: string[] = [];
+    runInfer({ cwd, log: (l) => lines.push(l), now });
+    const out = lines.join("\n");
+    expect(out).toContain("WARNING");
+    expect(out).toContain("look like data rather than structure");
+    expect(out).toContain("SECURITY.md");
+  });
+
+  it("stays quiet for ordinary structural paths", () => {
+    writeConfig();
+    fixtures([{ data: { object: { amount: 1, currency: "usd" } } }]);
+    const lines: string[] = [];
+    runInfer({ cwd, log: (l) => lines.push(l), now });
+    expect(lines.join("\n")).not.toContain("WARNING");
+  });
+});
+
 describe("statistical claims match the evidence behind them", () => {
   it("REGRESSION: a corpus never drifts against itself (presence rounding)", async () => {
     const { observe } = await import("../src/core/observe.js");

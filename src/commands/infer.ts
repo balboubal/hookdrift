@@ -10,6 +10,15 @@ import {
   saveContract,
 } from "../core/contract.js";
 
+/**
+ * Path segments that look like payload data rather than a schema field:
+ * an email, a provider secret/token prefix, a UUID, or a long opaque blob.
+ * Deliberately narrow - a false warning is cheap, a missed committed secret
+ * is not.
+ */
+const SENSITIVE_SEGMENT =
+  /@|^(sk|pk|rk|whsec|shpat|shpss|ghp|gho|xox[baprs])_|^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$|^[A-Za-z0-9+/_-]{32,}$/i;
+
 export interface InferOptions {
   cwd: string;
   fixturesDir?: string;
@@ -65,6 +74,22 @@ export function runInfer(opts: InferOptions): number {
             `  note: ${path} marked polymorphic (observed as both ID string and object - expandable field)`,
           );
         }
+      }
+      // Object keys become path segments, so a map keyed by data writes that
+      // data into a file you are about to commit. Warn at the moment it
+      // happens rather than only in SECURITY.md.
+      const sensitive = Object.keys(contract.fields).filter((p) =>
+        p.split(".").some((seg) => SENSITIVE_SEGMENT.test(seg)),
+      );
+      if (sensitive.length > 0) {
+        log(
+          `  WARNING: ${sensitive.length} contract path(s) look like data rather than structure, e.g. ${sensitive
+            .slice(0, 3)
+            .join(", ")}${sensitive.length > 3 ? ", ..." : ""}`,
+        );
+        log(
+          `           Object keys become path segments. Review this contract before committing it - see SECURITY.md.`,
+        );
       }
     }
   }

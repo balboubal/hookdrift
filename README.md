@@ -169,7 +169,7 @@ Posts **one** PR comment, updated in place on re-runs. No findings → no commen
 
 - **Not webhook infrastructure.** No receiving, routing, queueing, retries, or replay — Hookdeck, Svix, and Convoy do that well. They monitor *delivery*; hookdrift monitors *shape*. A 200 response with a broken field looks healthy to them by design.
 - **Not a schema registry or contract-testing framework.** Pact needs cooperation from the producer; you do not control Stripe.
-- **Not a payload store.** Contracts contain field paths, types, formats, presence ratios, and small enum value sets — never payload values.
+- **Not a payload store.** Contracts contain field paths, types, formats and presence ratios rather than the values in your payloads — with two documented exceptions: **object keys become path segments** (so a map keyed by email or tenant id puts those keys in the contract), and **inferred enum values are stored verbatim**. Both are spelled out in [SECURITY.md](SECURITY.md); review contracts before committing if your payloads carry dynamic keys.
 
 ## Honest limitations
 
