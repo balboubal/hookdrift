@@ -7,9 +7,14 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
+      # Contract filenames depend on filesystem case-sensitivity and on Windows
+      # reserved device names, so "it passes on Linux" is not evidence that it
+      # works where people actually capture webhook payloads.
+      fail-fast: false
       matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
         node: [20, 22]
     steps:
       - uses: actions/checkout@v7

@@ -1,5 +1,10 @@
 # hookdrift
 
+[![npm](https://img.shields.io/npm/v/hookdrift.svg)](https://www.npmjs.com/package/hookdrift)
+[![CI](https://github.com/balboubal/hookdrift/actions/workflows/ci.yml/badge.svg)](https://github.com/balboubal/hookdrift/actions/workflows/ci.yml)
+[![node](https://img.shields.io/node/v/hookdrift.svg)](package.json)
+[![license](https://img.shields.io/npm/l/hookdrift.svg)](LICENSE)
+
 **Detect when a third-party webhook payload changes shape — before it silently breaks your handler in production.**
 
 You're moving to a new Stripe API version, or Shopify is moving you to one. A field is gone, a type changed, something is nullable now. Your handler doesn't error — delivery succeeds, you return 200, every monitor stays green — but your code reads a field that isn't there any more, and you find out days later from a customer.

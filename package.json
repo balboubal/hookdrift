@@ -34,10 +34,15 @@
   },
   "keywords": [
     "webhook",
+    "webhooks",
     "schema",
     "contract",
+    "contract-testing",
     "drift",
+    "payload",
+    "api-versioning",
     "stripe",
+    "shopify",
     "github",
     "ci"
   ],
