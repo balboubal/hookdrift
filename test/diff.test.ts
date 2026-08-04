@@ -58,13 +58,24 @@ describe("BREAKING", () => {
     expect(fs.filter((x) => x.kind === "new_field" && x.path === "totals.amount")).toHaveLength(0);
   });
 
-  it("enum value vanished with high confidence and >= 50 new values", () => {
+  it("enum value vanished is BREAKING only when the contract declares the enum closed", () => {
     // 3 distinct over 100 samples -> confidence 0.97; 60 new values >= 50.
     const oldS = Array.from({ length: 100 }, (_, i) => ({ c: ["usd", "eur", "gbp"][i % 3] }));
     const newS = Array.from({ length: 60 }, (_, i) => ({ c: ["usd", "eur"][i % 2] }));
-    const f = one(diff(oldS, newS), "enum_value_removed");
-    expect(f.severity).toBe("BREAKING");
-    expect(f.message).toContain("gbp");
+
+    // Inferred enums cannot distinguish "removed" from "rare and unsampled".
+    const inferred = one(diff(oldS, newS), "enum_value_removed");
+    expect(inferred.severity).toBe("WARNING");
+    expect(inferred.message).toContain("gbp");
+    expect(inferred.message).toContain("enumAuthoritative");
+
+    // Declared closed by hand: the provider documents the set, so it breaks.
+    const contract = buildContract("p", "e", observe(oldS), NOW);
+    contract.fields["c"]!.enumAuthoritative = true;
+    const declared = diffContract(contract, observe(newS), { minSamples: 1 }).find(
+      (x) => x.kind === "enum_value_removed",
+    )!;
+    expect(declared.severity).toBe("BREAKING");
   });
 
   it("enum value vanished below the confidence bar is WARNING, not breaking", () => {

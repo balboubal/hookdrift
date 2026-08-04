@@ -8,6 +8,19 @@ export interface FieldSchema {
   nullable?: boolean;
   /** samplesContainingPath / totalSamples. 1.0 means required. */
   presence: number;
+  /**
+   * Exact number of samples containing this path. `presence` is rounded for
+   * readability, which made 19,999/20,000 persist as exactly 1.0 and then
+   * report "required -> optional" against the very same corpus. Comparisons
+   * use this when present; older contracts without it fall back to presence.
+   */
+  containCount?: number;
+  /**
+   * Set by hand to declare the enum closed. Without it, a value disappearing
+   * is only ever a WARNING: inference cannot distinguish "removed" from "rare
+   * and not sampled this time" without per-value frequencies.
+   */
+  enumAuthoritative?: boolean;
   /** Conservative format claim — only set when every observed value matched. */
   format?: string;
   /** Only meaningful for number paths: every observed number was an integer. */

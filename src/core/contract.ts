@@ -39,6 +39,7 @@ function fieldFromStats(stats: PathStats, totalSamples: number): FieldSchema {
   const field: FieldSchema = {
     types: sortTypes(stats.types),
     presence: round(stats.containCount / totalSamples),
+    containCount: stats.containCount,
   };
   if (stats.nullable) field.nullable = true;
   if (looksPolymorphic(stats)) field.polymorphic = true;
@@ -106,8 +107,8 @@ export function mergeContract(old: Contract, obs: Observation, now: string): Con
 
     if (prev && !stats) {
       // Path unseen in the new batch: keep every claim, dilute presence.
-      const oldContain = Math.round(prev.presence * old.samplesObserved);
-      fields[path] = { ...prev, presence: round(oldContain / total) };
+      const oldContain = prev.containCount ?? Math.round(prev.presence * old.samplesObserved);
+      fields[path] = { ...prev, presence: round(oldContain / total), containCount: oldContain };
       continue;
     }
     if (!prev && stats) {
@@ -121,12 +122,17 @@ export function mergeContract(old: Contract, obs: Observation, now: string): Con
 
     const p = prev!;
     const s = stats!;
-    const oldContain = Math.round(p.presence * old.samplesObserved);
+    // Prefer the exact stored count; reconstructing it from rounded presence
+    // accumulates error across every merge.
+    const oldContain = p.containCount ?? Math.round(p.presence * old.samplesObserved);
+    const mergedContain = oldContain + s.containCount;
     const merged: FieldSchema = {
       types: sortTypes(new Set<JsonType>([...p.types, ...s.types])),
-      presence: round((oldContain + s.containCount) / total),
+      presence: round(mergedContain / total),
+      containCount: mergedContain,
     };
     if (p.nullable || s.nullable) merged.nullable = true;
+    if (p.enumAuthoritative) merged.enumAuthoritative = true;
 
     // Format: keep the old claim only if every new value still matches it.
     if (p.format && s.formatCandidates?.has(p.format)) merged.format = p.format;
@@ -221,6 +227,8 @@ export function contractPath(contractsDir: string, provider: string, event: stri
 const FieldZ = z.looseObject({
   types: z.array(z.enum(["string", "number", "boolean", "object", "array"])),
   presence: z.number().min(0).max(1),
+  containCount: z.number().int().min(0).optional(),
+  enumAuthoritative: z.boolean().optional(),
   nullable: z.boolean().optional(),
   format: z.string().optional(),
   intOnly: z.boolean().optional(),

@@ -208,6 +208,16 @@ export function diffContract(
     const p = coincidenceProbability(presence, N);
     const contain = Math.round(presence * C);
     const anchorAbsent = absentSet.has(anchor);
+    // (1-presence)^N treats the observed ratio as the true rate. From a
+    // one-sample baseline that yields p=0 and an immediate BREAKING, which a
+    // single observation cannot support. Below minSamples of baseline evidence
+    // the claim is capped at WARNING.
+    const thinBaseline = C < minSamples;
+    const absenceSeverity = thinBaseline
+      ? severityForAbsence(p) === "BREAKING"
+        ? "WARNING"
+        : severityForAbsence(p)
+      : severityForAbsence(p);
     const extraKids = members.filter((m) => m !== anchor).length;
     const scope = anchorAbsent
       ? extraKids > 0
@@ -216,12 +226,15 @@ export function diffContract(
       : ` - all ${members.length} path(s) beneath it are absent`;
     add({
       path: anchor,
-      severity: severityForAbsence(p),
+      severity: absenceSeverity,
       kind: "path_removed",
       message:
         `${anchorAbsent ? "absent from all" : "subtree absent from all"} ${N} new sample(s)${scope}; ` +
         `contract presence ${round4(presence)} (${contain}/${C} samples), ` +
-        `so absence across ${N} sample(s) is p=${round4(p)} by chance${evidenceNote(p)}`,
+        `so absence across ${N} sample(s) is p=${round4(p)} by chance${evidenceNote(p)}` +
+        (thinBaseline
+          ? ` - capped at WARNING: ${C} baseline sample(s) is below minSamples=${minSamples}, too few to call a field required`
+          : ""),
     });
   }
 
@@ -334,17 +347,25 @@ export function diffContract(
         const gone = field.enum.filter((v) => !fresh.has(v));
         const novel = [...fresh].filter((v) => !field.enum!.includes(v)).sort();
         if (gone.length > 0) {
-          const strongEvidence =
+          // enumConfidence measures cardinality-vs-volume ("is this path an
+          // enum at all"), NOT the likelihood that a particular value is gone.
+          // A value seen once in 1,000 observations is absent from 60 fresh
+          // samples ~94% of the time with nothing changed, yet the old gate
+          // (confidence >= 0.95, >= 50 values) called that BREAKING. Without
+          // per-value frequencies the tool cannot tell "removed" from "rare",
+          // so removal is a WARNING unless the enum is declared closed by hand.
+          const authoritative = field.enumAuthoritative === true;
+          const volume =
             conf >= ENUM_BREAK_CONFIDENCE && stats.stringCount >= ENUM_BREAK_MIN_VALUES;
           add({
             path,
-            severity: strongEvidence ? "BREAKING" : "WARNING",
+            severity: authoritative && volume ? "BREAKING" : "WARNING",
             kind: "enum_value_removed",
             message:
               `enum value(s) no longer observed: [${gone.join(", ")}] (enumConfidence ${conf}; ${stats.stringCount} values in ${N} new samples)` +
-              (strongEvidence
-                ? ""
-                : ` - warning only: needs enumConfidence >= ${ENUM_BREAK_CONFIDENCE} and >= ${ENUM_BREAK_MIN_VALUES} observed values to be breaking`),
+              (authoritative && volume
+                ? " - contract declares this enum authoritative"
+                : ` - warning only: absence cannot be distinguished from a rare value going unsampled. Set "enumAuthoritative": true on this field if the provider documents a closed set`),
           });
         }
         if (novel.length > 0) {
@@ -362,8 +383,13 @@ export function diffContract(
 
     // Required became optional. With too few new samples, one missing payload
     // is not evidence - downgrade to INFO and say so.
+    // "Required" is decided from the exact stored count where available:
+    // presence is rounded for readability, so 19,999/20,000 persisted as 1.0
+    // and then reported drift against the very corpus it was built from.
     const freshPresence = stats.containCount / N;
-    if (field.presence === 1 && freshPresence < 1) {
+    const wasRequired =
+      field.containCount !== undefined ? field.containCount === C : field.presence === 1;
+    if (wasRequired && freshPresence < 1) {
       add({
         path,
         severity: fewSamples ? "INFO" : "WARNING",
@@ -373,7 +399,7 @@ export function diffContract(
           (fewSamples ? ` (only ${N} new sample(s), below minSamples=${minSamples} - informational)` : ""),
       });
     } else if (
-      field.presence < 1 &&
+      !wasRequired &&
       freshPresence < 1 &&
       Math.abs(freshPresence - field.presence) >= PRESENCE_SHIFT_MIN
     ) {

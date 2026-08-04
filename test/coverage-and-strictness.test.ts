@@ -147,6 +147,42 @@ describe("the report proves what was checked", () => {
   });
 });
 
+describe("statistical claims match the evidence behind them", () => {
+  it("REGRESSION: a corpus never drifts against itself (presence rounding)", async () => {
+    const { observe } = await import("../src/core/observe.js");
+    const { buildContract } = await import("../src/core/contract.js");
+    const { diffContract } = await import("../src/core/diff.js");
+    // 19,999/20,000 rounds to presence 1.0; the exact count must decide.
+    const samples = Array.from({ length: 20000 }, (_, i) => (i === 0 ? { a: 1 } : { a: 1, rare: 1 }));
+    const c = buildContract("p", "e", observe(samples), NOW);
+    expect(c.fields["rare"]!.presence).toBe(1); // still rounded for display
+    expect(c.fields["rare"]!.containCount).toBe(19999); // but the truth is stored
+    expect(diffContract(c, observe(samples), { minSamples: 1 })).toHaveLength(0);
+  });
+
+  it("REGRESSION: a one-sample baseline cannot produce a BREAKING removal", async () => {
+    const { observe } = await import("../src/core/observe.js");
+    const { buildContract } = await import("../src/core/contract.js");
+    const { diffContract } = await import("../src/core/diff.js");
+    const c = buildContract("p", "e", observe([{ x: 1 }]), NOW);
+    const f = diffContract(c, observe([{ y: 2 }]), { minSamples: 10 }).find((x) => x.path === "x")!;
+    expect(f.severity).toBe("WARNING");
+    expect(f.message).toContain("below minSamples");
+  });
+
+  it("a well-evidenced baseline still breaks on a genuine removal", async () => {
+    const { observe } = await import("../src/core/observe.js");
+    const { buildContract } = await import("../src/core/contract.js");
+    const { diffContract } = await import("../src/core/diff.js");
+    const base = Array.from({ length: 40 }, () => ({ x: 1 }));
+    const c = buildContract("p", "e", observe(base), NOW);
+    const f = diffContract(c, observe([{ y: 2 }, { y: 3 }]), { minSamples: 10 }).find(
+      (x) => x.path === "x",
+    )!;
+    expect(f.severity).toBe("BREAKING");
+  });
+});
+
 describe("depth limit replaces stack overflow", () => {
   it("a payload nested past the limit fails with a named, bounded error", () => {
     let o: unknown = 1;
