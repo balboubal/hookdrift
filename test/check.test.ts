@@ -37,6 +37,20 @@ afterEach(() => {
   rmSync(cwd, { recursive: true, force: true });
 });
 
+describe("newcomer first-touch: infer with the placeholder glob", () => {
+  it("names the searched glob and says how to fix it, exit 1", () => {
+    // A brand-new user runs init then infer; the default glob points at
+    // payloads they do not have. The message must be actionable.
+    writeConfig(); // fixtures: fixtures/**/*.json - nothing there
+    const lines: string[] = [];
+    expect(runInfer({ cwd, log: (l) => lines.push(l), now })).toBe(1);
+    const out = lines.join("\n");
+    expect(out).toContain("No payloads found");
+    expect(out).toContain("fixtures/**/*.json"); // the exact glob it searched
+    expect(out).toContain("saved webhook payloads"); // what to point it at
+  });
+});
+
 describe("infer → check wiring and exit codes", () => {
   it("exits 0 with no findings when nothing drifted", () => {
     writeConfig();

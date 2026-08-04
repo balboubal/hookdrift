@@ -70,7 +70,15 @@ export function runInfer(opts: InferOptions): number {
   }
 
   if (wrote === 0 && failed === 0) {
-    log("No contracts written — check the fixtures globs in hookdrift.config.json.");
+    // The default config ships a placeholder glob (test/fixtures/stripe/...),
+    // so this is the first message many newcomers see. Tell them exactly what
+    // to change and what the tool was looking for.
+    const globs = Object.values(config.providers).map((pc) => pc.fixtures);
+    log(
+      `No payloads found, so no contracts were written.\n` +
+        `hookdrift looked for JSON files matching: ${globs.join(", ") || "(no providers configured)"}\n` +
+        `Point the "fixtures" glob(s) in hookdrift.config.json at your saved webhook payloads (one JSON file per event), then run \`hookdrift infer\` again.`,
+    );
     return 1;
   }
   if (wrote > 0) {

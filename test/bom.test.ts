@@ -89,7 +89,7 @@ describe("fixtures with a UTF-8 BOM", () => {
     const out = lines.join("\n");
     expect(out).not.toContain("skipped");
     expect(out).toContain("4 new sample(s)");
-    expect(out).not.toContain("No contracts written");
+    expect(out).not.toContain("No payloads found");
   });
 
   it("still reports genuinely malformed JSON as skipped", () => {
