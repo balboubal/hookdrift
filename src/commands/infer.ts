@@ -44,7 +44,16 @@ export function runInfer(opts: InferOptions): number {
       continue;
     }
     for (const [event, samples] of [...batch.events.entries()].sort()) {
-      const obs = observe(samples);
+      // A payload past the depth limit must not abort inference for every
+      // other event, matching how check isolates one bad contract.
+      let obs;
+      try {
+        obs = observe(samples);
+      } catch (e) {
+        log(`${provider}/${event}: SKIPPED - ${(e as Error).message}`);
+        failed += 1;
+        continue;
+      }
       const file = contractPath(contractsDir, provider, event);
       // An unreadable existing contract must not abort inference for every
       // other event. Report it, skip this one, and keep going; --rebuild
