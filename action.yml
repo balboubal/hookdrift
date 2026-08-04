@@ -11,6 +11,12 @@ inputs:
   working-directory:
     description: "Directory containing hookdrift.config.json"
     default: "."
+  fail-on-skipped:
+    description: "Fail if any matched fixture could not be parsed (same as check --fail-on-skipped)"
+    default: "false"
+  fail-on-uncontracted:
+    description: "Fail if fixtures contain an event with no committed contract (same as check --fail-on-uncontracted)"
+    default: "false"
   version:
     description: "hookdrift npm version to run. Pinned by default so a green commit cannot silently run different code later."
     default: "0.1.3"
@@ -28,15 +34,30 @@ runs:
       env:
         HOOKDRIFT_VERSION: ${{ inputs.version }}
         HOOKDRIFT_STRICT: ${{ inputs.strict }}
+        HOOKDRIFT_FAIL_ON_SKIPPED: ${{ inputs.fail-on-skipped }}
+        HOOKDRIFT_FAIL_ON_UNCONTRACTED: ${{ inputs.fail-on-uncontracted }}
       run: |
         set +e
-        if ! printf '%s' "$HOOKDRIFT_VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$|^latest$'; then
-          echo "hookdrift-action: refusing to run: 'version' must be an exact semver or 'latest', got '$HOOKDRIFT_VERSION'" >&2
+        # SemVer 2.0.0 grammar, not an approximation: the previous pattern
+        # accepted '1.2.3-..' and '1.2.3-01' (empty and leading-zero prerelease
+        # identifiers) and rejected valid build metadata like '1.2.3+build.1'.
+        if ! printf '%s' "$HOOKDRIFT_VERSION" | grep -Eq '^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-(0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*)(\.(0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*))*)?(\+[0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*)?$|^latest$'; then
+          echo "hookdrift-action: refusing to run: 'version' must be an exact SemVer version or 'latest', got '$HOOKDRIFT_VERSION'" >&2
           exit 2
         fi
-        STRICT_FLAG=""
-        [ "$HOOKDRIFT_STRICT" = "true" ] && STRICT_FLAG="--strict"
-        npx -y "hookdrift@$HOOKDRIFT_VERSION" check $STRICT_FLAG --json > "$RUNNER_TEMP/hookdrift-report.json"
+        # Exactly true or false. 'ture' or 'True' silently meant false, the same
+        # fail-open that a mistyped --strcit used to be.
+        for pair in "strict=$HOOKDRIFT_STRICT" "fail-on-skipped=$HOOKDRIFT_FAIL_ON_SKIPPED" "fail-on-uncontracted=$HOOKDRIFT_FAIL_ON_UNCONTRACTED"; do
+          case "${pair#*=}" in
+            true|false) ;;
+            *) echo "hookdrift-action: refusing to run: '${pair%%=*}' must be exactly 'true' or 'false', got '${pair#*=}'" >&2; exit 2 ;;
+          esac
+        done
+        FLAGS=""
+        [ "$HOOKDRIFT_STRICT" = "true" ] && FLAGS="$FLAGS --strict"
+        [ "$HOOKDRIFT_FAIL_ON_SKIPPED" = "true" ] && FLAGS="$FLAGS --fail-on-skipped"
+        [ "$HOOKDRIFT_FAIL_ON_UNCONTRACTED" = "true" ] && FLAGS="$FLAGS --fail-on-uncontracted"
+        npx -y "hookdrift@$HOOKDRIFT_VERSION" check $FLAGS --json > "$RUNNER_TEMP/hookdrift-report.json"
         echo "exit_code=$?" >> "$GITHUB_OUTPUT"
         # Advisory: never fails the job, but a crash must not masquerade as a
         # code-reference report in the PR comment.
@@ -155,15 +176,41 @@ runs:
           if (process.env.HOOKDRIFT_IMPACT_OK === 'true') {
             try { impact = fs.readFileSync(path.join(process.env.RUNNER_TEMP, 'hookdrift-impact.txt'), 'utf8'); } catch {}
           }
+          // impact prints the terminal formatter, so its stdout carries the
+          // same provider-controlled strings as the finding list - and it was
+          // inserted raw inside a fixed \`\`\` fence. An enum value containing a
+          // fence, then </details>, a heading and a mention closed the block
+          // early and injected all three into the comment. Strip control bytes,
+          // bound the volume, and open a fence LONGER than any backtick run in
+          // the text, so nothing inside it can terminate it.
+          const fenced = (text) => {
+            const clean = text
+              .split('\n').slice(0, 200)
+              .map(l => l.replace(/[\x00-\x08\x0b-\x1f\x7f-\x9f\u200b-\u200f\u2028\u2029\u202a-\u202e\u2066-\u2069]/g, '').slice(0, 400))
+              .join('\n');
+            const longest = Math.max(0, ...(clean.match(/\`+/g) || []).map(r => r.length));
+            const fence = '\`'.repeat(Math.max(3, longest + 1));
+            return `${fence}\n${clean}\n${fence}`;
+          };
+
+          let details = '';
           if (counts.INFO > 0 || impact.trim()) {
-            body += `\n<details><summary>Details</summary>\n\n`;
+            details += `\n<details><summary>Details</summary>\n\n`;
             if (counts.INFO > 0) {
-              body += `${counts.INFO} informational finding(s) - run \`hookdrift check\` locally to see them.\n\n`;
+              details += `${counts.INFO} informational finding(s) - run \`hookdrift check\` locally to see them.\n\n`;
             }
             if (impact.trim()) {
-              body += `Code references (heuristic):\n\n\`\`\`\n${impact.trim()}\n\`\`\`\n\n`;
+              details += `Code references (heuristic):\n\n${fenced(impact.trim())}\n\n`;
             }
-            body += `</details>\n`;
+            details += `</details>\n`;
+          }
+          // Slicing the assembled body could cut a fence or a <details> in half
+          // and swallow everything after it, so the optional block is dropped
+          // whole rather than truncated.
+          if (body.length + details.length > 60000) {
+            body += `\n*(details omitted: report too large - run \`hookdrift check\` locally)*\n`;
+          } else {
+            body += details;
           }
           if (body.length > 60000) body = body.slice(0, 60000) + '\n\n*(truncated)*';
 
