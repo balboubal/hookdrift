@@ -40,7 +40,7 @@ export function loadFixtures(
       // files and editors add UTF-8 BOMs - see readTextFileSync.
       payload = JSON.parse(readTextFileSync(file));
     } catch (e) {
-      skipped.push({ file, reason: `invalid JSON (${(e as Error).message})` });
+      skipped.push({ file, reason: parseFailure(e as Error) });
       continue;
     }
     const event =
@@ -56,6 +56,32 @@ export function loadFixtures(
     else events.set(event, [payload]);
   }
   return { events, skipped, fileCount: files.length };
+}
+
+/**
+ * Describe a JSON parse failure without quoting the payload.
+ *
+ * Node's JSON.parse messages embed a slice of the source: a fixture containing
+ * `{"token":sk_live_SECRET123}` produced `Unexpected token 's',
+ * "{"token":sk_live_SE"... is not valid JSON`, and that string is stored in
+ * coverage.skipped, printed to the console and posted to CI logs. Keep the
+ * position, which is what actually helps fix the file; drop the excerpt.
+ */
+export function parseFailure(e: Error): string {
+  const lineCol = /line (\d+) column (\d+)/.exec(e.message);
+  if (lineCol) return `invalid JSON at line ${lineCol[1]} column ${lineCol[2]}`;
+  const pos = /position (\d+)/.exec(e.message);
+  if (pos) return `invalid JSON at position ${pos[1]}`;
+  // Node reports no position for these two, and the "unexpected token" text is
+  // exactly the variant that quotes the file, so it is replaced rather than
+  // trimmed. Both categories are still enough to act on.
+  if (/Unexpected end of JSON input/.test(e.message)) {
+    return "invalid JSON: unexpected end of input (truncated file?)";
+  }
+  if (/Unexpected token/.test(e.message)) {
+    return "invalid JSON: unexpected token (excerpt withheld - the parser quotes file contents)";
+  }
+  return "invalid JSON";
 }
 
 function extractEvent(payload: unknown, path: string): unknown {

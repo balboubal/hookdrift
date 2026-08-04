@@ -357,15 +357,23 @@ export function diffContract(
           const authoritative = field.enumAuthoritative === true;
           const volume =
             conf >= ENUM_BREAK_CONFIDENCE && stats.stringCount >= ENUM_BREAK_MIN_VALUES;
+          // Both conditions are reported separately, because telling someone to
+          // set a flag they have already set is the fastest way to lose their
+          // trust in the rest of the output.
+          const why = authoritative
+            ? ` - warning only: the enum is declared authoritative, but this batch is` +
+              ` too thin to act on it (needs enumConfidence >= ${ENUM_BREAK_CONFIDENCE},` +
+              ` have ${conf}; needs >= ${ENUM_BREAK_MIN_VALUES} values, have ${stats.stringCount})`
+            : ` - warning only: absence cannot be distinguished from a rare value going` +
+              ` unsampled. Set "enumAuthoritative": true on this field if the provider` +
+              ` documents a closed set`;
           add({
             path,
             severity: authoritative && volume ? "BREAKING" : "WARNING",
             kind: "enum_value_removed",
             message:
               `enum value(s) no longer observed: [${gone.join(", ")}] (enumConfidence ${conf}; ${stats.stringCount} values in ${N} new samples)` +
-              (authoritative && volume
-                ? " - contract declares this enum authoritative"
-                : ` - warning only: absence cannot be distinguished from a rare value going unsampled. Set "enumAuthoritative": true on this field if the provider documents a closed set`),
+              (authoritative && volume ? " - contract declares this enum authoritative" : why),
           });
         }
         if (novel.length > 0) {

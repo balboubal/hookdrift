@@ -5,6 +5,13 @@ import { ID_LIKE, numberFormatCandidates, stringFormatCandidates } from "./forma
 export const ENUM_MAX_DISTINCT = 12;
 /** Below this many observed values we never claim an enum. */
 export const ENUM_MIN_SAMPLES = 30;
+/**
+ * Longest string that can be an enum member. Enum values are stored verbatim in
+ * a file the README tells you to commit, so an unbounded one is both a privacy
+ * leak and a size problem: 30 observations of one 200,000-character string
+ * produced a 200 KB "enum" of one value. A discriminator is short by nature.
+ */
+export const ENUM_MAX_VALUE_LENGTH = 200;
 
 interface Occurrence {
   type: JsonType | "null";
@@ -109,8 +116,13 @@ export function observe(samples: unknown[]): Observation {
           stats.stringCount += 1;
           if (!ID_LIKE.test(v)) stats.allIdLike = false;
           if (stats.distinct) {
-            stats.distinct.add(v);
-            if (stats.distinct.size > ENUM_MAX_DISTINCT) stats.distinct = null;
+            // A value too long to be a discriminator disqualifies the path from
+            // being an enum at all, rather than being stored verbatim.
+            if (v.length > ENUM_MAX_VALUE_LENGTH) stats.distinct = null;
+            else {
+              stats.distinct.add(v);
+              if (stats.distinct.size > ENUM_MAX_DISTINCT) stats.distinct = null;
+            }
           }
           candidates = stringFormatCandidates(v);
         } else if (occ.type === "number") {
