@@ -5,7 +5,7 @@ import type { Finding } from "../types.js";
 import { loadConfig } from "../core/config.js";
 import { loadFixtures } from "../core/fixtures.js";
 import { observe } from "../core/observe.js";
-import { contractPath, loadContract } from "../core/contract.js";
+import { contractPath, loadContract, writeFileAtomic } from "../core/contract.js";
 import { diffContract } from "../core/diff.js";
 import { matchIgnore } from "../core/ignore.js";
 
@@ -15,14 +15,39 @@ export interface CheckOptions {
   strict?: boolean;
   showSuppressed?: boolean;
   json?: boolean;
+  /** Fail the run if any matched fixture could not be used. */
+  failOnSkipped?: boolean;
+  /** Fail the run if fixtures contained an event with no committed contract. */
+  failOnUncontracted?: boolean;
   log?: (line: string) => void;
   now?: () => string;
+}
+
+/**
+ * What the run actually inspected. Findings alone cannot prove coverage: a run
+ * that parsed nothing, skipped the one drifted fixture, or exercised no
+ * committed contract produces an empty findings array that reads as health.
+ */
+export interface Coverage {
+  /** True when a directory argument narrowed the run to a subset. */
+  partial: boolean;
+  filesMatched: number;
+  filesParsed: number;
+  /** Files matched by a glob but not usable, with the reason. */
+  skipped: { file: string; reason: string }[];
+  eventsObserved: number;
+  contractsChecked: number;
+  /** Committed contracts that received no fixtures this run. */
+  contractsUnexercised: string[];
+  /** Events present in fixtures with no committed contract. */
+  eventsUncontracted: string[];
 }
 
 export interface LastRun {
   ranAt: string;
   strict: boolean;
   exitCode: number;
+  coverage: Coverage;
   findings: Finding[];
 }
 
@@ -62,13 +87,31 @@ export function runCheck(opts: CheckOptions): number {
   const now = opts.now ?? (() => new Date().toISOString());
   const config = loadConfig(cwd);
   const strict = opts.strict ?? config.strict;
+  const failOnSkipped = opts.failOnSkipped ?? config.failOnSkipped;
+  const failOnUncontracted = opts.failOnUncontracted ?? config.failOnUncontracted;
   const contractsDir = join(cwd, config.contractsDir);
   const findings: Finding[] = [];
   const exercised = new Set<string>();
   let checked = 0;
+  const coverage: Coverage = {
+    partial: Boolean(fixturesDir),
+    filesMatched: 0,
+    filesParsed: 0,
+    skipped: [],
+    eventsObserved: 0,
+    contractsChecked: 0,
+    contractsUnexercised: [],
+    eventsUncontracted: [],
+  };
 
   for (const [provider, pc] of Object.entries(config.providers)) {
     const batch = loadFixtures(cwd, pc.fixtures, pc.eventPath, fixturesDir);
+    coverage.filesMatched += batch.fileCount;
+    coverage.skipped.push(
+      ...batch.skipped.map((s) => ({ file: relative(cwd, s.file).replace(/\\/g, "/"), reason: s.reason })),
+    );
+    coverage.eventsObserved += batch.events.size;
+    for (const [, s] of batch.events) coverage.filesParsed += s.length;
     for (const s of batch.skipped) log(`  skipped ${s.file}: ${s.reason}`);
     for (const [event, samples] of [...batch.events.entries()].sort()) {
       exercised.add(resolve(contractPath(contractsDir, provider, event)));
@@ -92,20 +135,36 @@ export function runCheck(opts: CheckOptions): number {
         continue;
       }
       if (!contract) {
+        coverage.eventsUncontracted.push(`${provider}/${event}`);
         findings.push({
           provider,
           event,
           path: "",
-          severity: "INFO",
+          severity: failOnUncontracted ? "BREAKING" : "INFO",
           kind: "uncontracted_event",
-          message: `${samples.length} sample(s) observed but no committed contract - run \`hookdrift infer\` to create one`,
+          message:
+            `${samples.length} sample(s) observed but no committed contract - run \`hookdrift infer\` to create one` +
+            (failOnUncontracted ? " [--fail-on-uncontracted]" : ""),
         });
         continue;
       }
       checked += 1;
-      findings.push(
-        ...diffContract(contract, observe(samples), { minSamples: config.minSamples }),
-      );
+      try {
+        findings.push(
+          ...diffContract(contract, observe(samples), { minSamples: config.minSamples }),
+        );
+      } catch (e) {
+        // e.g. a payload nested past MAX_DEPTH. Name the event instead of dying
+        // with an unattributed stack overflow, and fail the run.
+        findings.push({
+          provider,
+          event,
+          path: "",
+          severity: "BREAKING",
+          kind: "invalid_contract",
+          message: `could not compare ${samples.length} sample(s): ${(e as Error).message}`,
+        });
+      }
     }
   }
 
@@ -116,14 +175,32 @@ export function runCheck(opts: CheckOptions): number {
   // against a fixtures subdirectory are legitimate.
   const onDisk = globSync("*/*.contract.json", { cwd: contractsDir, absolute: true });
   const unexercised = onDisk.filter((f) => !exercised.has(resolve(f)));
+  coverage.contractsChecked = checked;
+  coverage.contractsUnexercised = unexercised
+    .map((f) => relative(contractsDir, f).replace(/\\/g, "/"))
+    .sort();
   if (unexercised.length > 0) {
-    const names = unexercised
-      .slice(0, 5)
-      .map((f) => relative(contractsDir, f).replace(/\\/g, "/"))
-      .join(", ");
+    const names = coverage.contractsUnexercised.slice(0, 5).join(", ");
     log(
       `note: ${unexercised.length} committed contract(s) not exercised by this run (no matching fixtures): ${names}${unexercised.length > 5 ? ", ..." : ""}`,
     );
+  }
+
+  // A fixture that could not be parsed or had no event is a hole in coverage:
+  // the very file carrying the breaking shape may be the one that was skipped.
+  // Visible always; fatal under --fail-on-skipped.
+  if (coverage.skipped.length > 0 && failOnSkipped) {
+    findings.push({
+      provider: "",
+      event: "",
+      path: "",
+      severity: "BREAKING",
+      kind: "skipped_fixture",
+      message: `${coverage.skipped.length} matched fixture(s) could not be used, so their contents went unchecked [--fail-on-skipped]: ${coverage.skipped
+        .slice(0, 5)
+        .map((s) => s.file)
+        .join(", ")}${coverage.skipped.length > 5 ? ", ..." : ""}`,
+    });
   }
 
   // Ignore rules apply after diffing: findings are flagged, never dropped, so
@@ -151,8 +228,8 @@ export function runCheck(opts: CheckOptions): number {
 
   // Persist for `explain` and `impact`.
   mkdirSync(contractsDir, { recursive: true });
-  const report: LastRun = { ranAt: now(), strict, exitCode, findings };
-  writeFileSync(join(contractsDir, "last-run.json"), JSON.stringify(report, null, 2) + "\n", "utf8");
+  const report: LastRun = { ranAt: now(), strict, exitCode, coverage, findings };
+  writeFileAtomic(join(contractsDir, "last-run.json"), JSON.stringify(report, null, 2) + "\n");
 
   if (json) {
     // The nothing-matched failure has no finding to carry it, so in --json mode

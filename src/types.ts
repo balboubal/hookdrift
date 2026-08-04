@@ -83,7 +83,8 @@ export type FindingKind =
   | "new_field"
   | "presence_shift"
   | "uncontracted_event"
-  | "invalid_contract";
+  | "invalid_contract"
+  | "skipped_fixture";
 
 export interface CodeRef {
   file: string;
@@ -123,5 +124,9 @@ export interface HookdriftConfig {
   strict: boolean;
   /** Below this many new samples, presence-based findings are downgraded to INFO. */
   minSamples: number;
+  /** Fail the run when a matched fixture could not be parsed or had no event. */
+  failOnSkipped: boolean;
+  /** Fail the run when fixtures contain an event with no committed contract. */
+  failOnUncontracted: boolean;
   ignore: IgnoreRule[];
 }

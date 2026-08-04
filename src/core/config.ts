@@ -28,26 +28,45 @@ const ConfigSchema = z
     contractsDir: z.string().min(1).default(".hookdrift"),
     providers: z
       .record(
-        // A provider name becomes a directory under contractsDir; an empty one
-        // put contracts in the contractsDir root and produced a contract whose
-        // own validator then rejected it, wedging every command.
-        z.string().min(1, "provider name must not be empty"),
-        z.object({
-          fixtures: z.string().min(1),
-          eventPath: z.string().min(1),
-        }),
+        // A provider name becomes a directory under contractsDir. Empty names
+        // wedged the tool; names containing separators or `..` wrote contracts
+        // outside contractsDir entirely (an untrusted PR editing config could
+        // place files anywhere writable).
+        z
+          .string()
+          .min(1, "provider name must not be empty")
+          .regex(
+            /^[A-Za-z0-9._-]+$/,
+            "provider name may only contain letters, numbers, dot, underscore and hyphen",
+          )
+          .refine((s) => s !== "." && s !== "..", "provider name must not be . or .."),
+        // .strict(): a misplaced key inside a provider (e.g. `strict` or a
+        // mistyped `eventpath`) used to be silently dropped.
+        z
+          .object({
+            fixtures: z.string().min(1),
+            eventPath: z.string().min(1),
+          })
+          .strict(),
       )
       .default({}),
     source: z.array(z.string()).default([]),
     strict: z.boolean().default(false),
     minSamples: z.number().int().positive().default(10),
+    failOnSkipped: z.boolean().default(false),
+    failOnUncontracted: z.boolean().default(false),
     ignore: z
       .array(
-        z.object({
-          path: z.string().min(1),
-          kind: z.enum(FINDING_KINDS).optional(),
-          reason: z.string().optional(),
-        }),
+        // .strict(): a typo'd `kinds` used to be stripped, turning a
+        // kind-scoped rule into one that suppressed EVERY kind at that path -
+        // including BREAKING findings - with no warning.
+        z
+          .object({
+            path: z.string().min(1),
+            kind: z.enum(FINDING_KINDS).optional(),
+            reason: z.string().optional(),
+          })
+          .strict(),
       )
       .default([]),
   })
@@ -61,6 +80,8 @@ export const DEFAULT_CONFIG: HookdriftConfig = {
   source: ["src/**/*.{ts,js,tsx}"],
   strict: false,
   minSamples: 10,
+  failOnSkipped: false,
+  failOnUncontracted: false,
   ignore: [],
 };
 

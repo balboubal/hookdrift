@@ -1,5 +1,5 @@
-import { mkdirSync, writeFileSync, existsSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { mkdirSync, writeFileSync, existsSync, renameSync } from "node:fs";
+import { dirname, join, resolve, sep } from "node:path";
 import { z } from "zod";
 import { readTextFileSync } from "./read.js";
 import type { Contract, FieldSchema, JsonType, Observation, PathStats } from "../types.js";
@@ -180,10 +180,35 @@ export function mergeContract(old: Contract, obs: Observation, now: string): Con
   };
 }
 
-export function contractPath(contractsDir: string, provider: string, event: string): string {
-  // Event names like "charge.succeeded" are safe as filenames; guard the rest.
+/**
+ * Sanitize an event name into a filename. Distinct events can sanitize to the
+ * same string ("a/b" and "a_b"), which silently merged two contracts into one
+ * file, so a short hash of the original name disambiguates. Names that are
+ * already filename-safe keep their plain form, so existing contracts and the
+ * common case are untouched.
+ */
+export function eventFileName(event: string): string {
   const safe = event.replace(/[^a-zA-Z0-9._-]/g, "_");
-  return join(contractsDir, provider, `${safe}.contract.json`);
+  if (safe === event) return `${event}.contract.json`;
+  let h = 0;
+  for (let i = 0; i < event.length; i++) h = (Math.imul(h, 31) + event.charCodeAt(i)) | 0;
+  const suffix = (h >>> 0).toString(36).slice(0, 6);
+  return `${safe}~${suffix}.contract.json`;
+}
+
+export function contractPath(contractsDir: string, provider: string, event: string): string {
+  const file = join(contractsDir, provider, eventFileName(event));
+  // Defence in depth: config validation already restricts provider names, but
+  // a contract path must never escape contractsDir regardless of how it got
+  // here - an untrusted config edit could otherwise write anywhere writable.
+  const root = resolve(contractsDir);
+  const target = resolve(file);
+  if (target !== root && !target.startsWith(root + sep)) {
+    throw new Error(
+      `refusing to use a contract path outside ${contractsDir}: provider "${provider}" resolves to ${target}`,
+    );
+  }
+  return file;
 }
 
 // Contracts are committed files the README invites users to hand-edit
@@ -241,7 +266,19 @@ export function loadContract(file: string): Contract | null {
   return contract;
 }
 
-export function saveContract(file: string, contract: Contract): void {
+/**
+ * Write via a temp file in the same directory, then rename. A direct write
+ * that is interrupted (crash, full disk, concurrent run) leaves a truncated
+ * file that the next run rejects as corrupt; rename is atomic on both POSIX
+ * and Windows for same-directory moves.
+ */
+export function writeFileAtomic(file: string, data: string): void {
   mkdirSync(dirname(file), { recursive: true });
-  writeFileSync(file, JSON.stringify(contract, null, 2) + "\n", "utf8");
+  const tmp = `${file}.${process.pid}.tmp`;
+  writeFileSync(tmp, data, "utf8");
+  renameSync(tmp, file);
+}
+
+export function saveContract(file: string, contract: Contract): void {
+  writeFileAtomic(file, JSON.stringify(contract, null, 2) + "\n");
 }

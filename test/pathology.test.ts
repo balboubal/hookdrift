@@ -1,3 +1,4 @@
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { observe } from "../src/core/observe.js";
 import { buildContract, contractPath } from "../src/core/contract.js";
@@ -31,11 +32,26 @@ describe("path-grammar collisions (documented, not endorsed)", () => {
   });
 });
 
-describe("event-name sanitization (documented)", () => {
-  it("event names differing only in sanitized characters share one contract file", () => {
-    // "a/b" and "a_b" both sanitize to "a_b.contract.json" - infer would merge
-    // them silently. contractPath is where the collision happens.
-    expect(contractPath("c", "p", "a/b")).toBe(contractPath("c", "p", "a_b"));
+describe("event-name sanitization", () => {
+  it("REGRESSION: names differing only in sanitized characters no longer collide", () => {
+    // "a/b" and "a_b" both sanitize to "a_b"; they used to share one contract
+    // file and merge silently. A hash suffix now disambiguates.
+    expect(contractPath("c", "p", "a/b")).not.toBe(contractPath("c", "p", "a_b"));
+  });
+
+  it("filename-safe event names keep their plain form (no churn for existing contracts)", () => {
+    expect(contractPath("c", "p", "charge.succeeded")).toBe(
+      join("c", "p", "charge.succeeded.contract.json"),
+    );
+    expect(contractPath("c", "p", "a_b")).toBe(join("c", "p", "a_b.contract.json"));
+  });
+
+  it("the disambiguating suffix is deterministic", () => {
+    expect(contractPath("c", "p", "a/b")).toBe(contractPath("c", "p", "a/b"));
+  });
+
+  it("a provider name cannot escape the contracts directory", () => {
+    expect(() => contractPath("c", "../escaped", "e")).toThrowError(/outside/);
   });
 });
 

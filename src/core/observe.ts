@@ -17,6 +17,14 @@ interface Occurrence {
  * Intermediate objects get their own "object"-typed occurrence, so every level
  * of the structure is contract-visible.
  */
+/**
+ * Deepest nesting we will walk. Recursion past this overflows the stack and
+ * dies with an unattributed "Maximum call stack size exceeded" that names no
+ * file; a bounded, named error is far more useful, and no real webhook payload
+ * comes close. (Node's own JSON.stringify overflows well before 12k levels.)
+ */
+export const MAX_DEPTH = 512;
+
 export function flattenSample(payload: unknown): Map<string, Occurrence[]> {
   const out = new Map<string, Occurrence[]>();
   const push = (path: string, occ: Occurrence) => {
@@ -24,7 +32,20 @@ export function flattenSample(payload: unknown): Map<string, Occurrence[]> {
     if (list) list.push(occ);
     else out.set(path, [occ]);
   };
+  let depth = 0;
   const visit = (value: unknown, path: string): void => {
+    if (++depth > MAX_DEPTH) {
+      throw new Error(
+        `payload nests deeper than ${MAX_DEPTH} levels at "${path}" - refusing to walk further`,
+      );
+    }
+    try {
+      visitInner(value, path);
+    } finally {
+      depth--;
+    }
+  };
+  const visitInner = (value: unknown, path: string): void => {
     if (value === null) {
       push(path, { type: "null", value: null });
     } else if (Array.isArray(value)) {

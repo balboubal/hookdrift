@@ -18,11 +18,51 @@ export function readVersion(): string {
   }
 }
 
+/**
+ * Flags each command accepts. Anything else is rejected rather than ignored:
+ * a safety flag that fails open on a typo (`--strcit` silently running
+ * non-strict) is worse than no flag at all.
+ */
+const ALLOWED_FLAGS: Record<string, readonly string[]> = {
+  init: [],
+  infer: ["--rebuild"],
+  check: ["--strict", "--json", "--show-suppressed", "--fail-on-skipped", "--fail-on-uncontracted"],
+  impact: ["--strict"],
+  explain: [],
+};
+const MAX_POSITIONAL: Record<string, number> = {
+  init: 0,
+  infer: 1,
+  check: 1,
+  impact: 0,
+  explain: 0,
+};
+
 export function main(argv: string[], cwd: string): number {
   const [command, ...rest] = argv;
-  const flags = new Set(rest.filter((a) => a.startsWith("--")));
-  const positional = rest.filter((a) => !a.startsWith("--"));
+  const flags = new Set(rest.filter((a) => a.startsWith("-")));
+  const positional = rest.filter((a) => !a.startsWith("-"));
   const dir = positional[0];
+
+  const allowed = ALLOWED_FLAGS[command ?? ""];
+  if (allowed) {
+    const unknown = [...flags].filter((f) => !allowed.includes(f));
+    if (unknown.length > 0) {
+      console.error(
+        `hookdrift: unknown flag${unknown.length > 1 ? "s" : ""} for \`${command}\`: ${unknown.join(", ")}\n` +
+          `Accepted: ${allowed.length ? allowed.join(", ") : "(none)"}\n` +
+          `Refusing to run: a mistyped flag would silently change what this command enforces.`,
+      );
+      return 2;
+    }
+    const maxPos = MAX_POSITIONAL[command!] ?? 0;
+    if (positional.length > maxPos) {
+      console.error(
+        `hookdrift: \`${command}\` takes ${maxPos} positional argument(s), got ${positional.length}: ${positional.join(", ")}`,
+      );
+      return 2;
+    }
+  }
 
   try {
     switch (command) {
@@ -37,6 +77,8 @@ export function main(argv: string[], cwd: string): number {
           strict: flags.has("--strict") ? true : undefined,
           showSuppressed: flags.has("--show-suppressed"),
           json: flags.has("--json"),
+          failOnSkipped: flags.has("--fail-on-skipped") ? true : undefined,
+          failOnUncontracted: flags.has("--fail-on-uncontracted") ? true : undefined,
         });
       case "impact":
         return runImpact(cwd, undefined, flags.has("--strict") ? true : undefined);
