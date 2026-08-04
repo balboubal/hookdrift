@@ -168,11 +168,14 @@ permissions:
   pull-requests: write # required for the PR comment; omit to skip commenting
 
 steps:
-  - uses: actions/checkout@v4
+  - uses: actions/checkout@v7
   - uses: balboubal/hookdrift@v0.1.3
     with:
       strict: false
       version: "0.1.3" # exact CLI version; pinning keeps a green commit green
+      # Coverage gates - off by default, worth turning on for a real gate:
+      fail-on-skipped: false # fail if a matched fixture could not be parsed
+      fail-on-uncontracted: false # fail if an event has no committed contract
 ```
 
 Pin the action by tag (or commit SHA in high-assurance setups) and pin `version` to an exact release — the CLI version is what determines the result, and an unpinned one lets a passing commit run different code later. On fork pull requests the token is read-only, so the comment step is skipped without failing the job; the check's exit code still decides the outcome.

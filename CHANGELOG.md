@@ -95,11 +95,19 @@ it was changed.
 - New `fail-on-skipped` and `fail-on-uncontracted` inputs expose the coverage
   gates to CI.
 
-### Packaging
+### Packaging and repository
 
 - `prepack` builds, so a clean checkout packs the CLI. Previously only
   `prepublishOnly` did, leaving `npm pack` and git installs with a three-file
   package containing no `dist/`.
+- **The contracts directory is seeded with a `.gitignore` for `last-run.json`.**
+  The README says `git add .hookdrift`, and that directory holds both the
+  contracts (meant to be committed) and the last check's transient report (not),
+  so the documented command committed a file that then reappeared dirty after
+  every run. An existing `.gitignore` is never overwritten.
+- CI runs on Linux, Windows and macOS against Node 20 and 22. Contract filenames
+  now depend on filesystem case-sensitivity and Windows reserved device names,
+  so a Linux-only pass was no longer evidence.
 
 ### Known limits, unchanged
 
