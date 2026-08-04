@@ -55,10 +55,16 @@ Usage:
       --strict                      warnings also cause a non-zero exit
       --json                        machine-readable findings on stdout
       --show-suppressed             include findings silenced by ignore rules
+      --fail-on-skipped             fail if a matched fixture could not be parsed
+      --fail-on-uncontracted        fail if an event has no committed contract
   hookdrift impact                  map last check's findings to code references
       --strict                      warnings also cause a non-zero exit
   hookdrift explain                 human-readable report of the last check
   hookdrift --version               print the installed version
+
+The two --fail-on flags also have config equivalents ("failOnSkipped",
+"failOnUncontracted"). Both default to off: a coverage hole is always reported
+in the "coverage" block of --json, but only fails the run when you ask it to.
 
 Contracts live in .hookdrift/<provider>/<event>.contract.json — commit them.
 hookdrift makes no network calls.`);

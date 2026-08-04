@@ -101,7 +101,7 @@ hookdrift compares payloads that are already on disk, so it is exactly as curren
 
 | Severity | Examples | Exit code |
 |---|---|---|
-| **BREAKING** | field removed; incompatible type change (`string → number`, scalar ↔ array); non-nullable field goes null; field moved (reported as a move, not delete+add); high-confidence enum value disappears | 1 |
+| **BREAKING** | field removed; incompatible type change (`string → number`, scalar ↔ array); non-nullable field goes null; field moved (reported as a move, not delete+add); enum value disappears from an enum declared authoritative | 1 |
 | **WARNING** | required field becomes optional; **new enum value appears** (breaks exhaustive `switch`es — the classic silent failure); string format changes; integers-only field starts sending floats | 0 (1 with `--strict`) |
 | **INFO** | new optional field; presence ratio shifts; type widening on polymorphic/expandable fields | 0 |
 
@@ -110,7 +110,8 @@ hookdrift compares payloads that are already on disk, so it is exactly as curren
 False-positive control is a design goal, not an afterthought:
 
 - **Expandable fields** (Stripe-style: an ID string *or* the expanded object, depending on your own request params) are detected automatically and get `"polymorphic": true` in the contract. The evidence bar is deliberately strict: only *coexistence* — both shapes present in the same batch, strings all provider IDs — is treated as INFO, because coexistence is what proves both shapes are currently legitimate. If every payload flips to the other shape, that is a WARNING, not INFO: code reading the old shape breaks whether the cause was expansion being toggled or the provider genuinely replacing the field.
-- **Minimum-sample guards**: one missing payload is not evidence. Presence findings downgrade to INFO below `minSamples` (default 10); enum-removal is only BREAKING with ≥ 0.95 confidence and ≥ 50 new observations.
+- **Minimum-sample guards**: one missing payload is not evidence. Presence findings downgrade to INFO below `minSamples` (default 10), and a *baseline* thinner than `minSamples` cannot produce a BREAKING removal at all — one observation is not enough to call a field required.
+- **Enum removal is a WARNING by default.** hookdrift stores which values it saw, not how often it saw each one, so it cannot distinguish "this value was removed" from "this rare value went unsampled" — a value seen once in 1,000 observations is missing from 60 fresh samples about 94% of the time with nothing changed. Set `"enumAuthoritative": true` on a field whose value set the provider documents as closed, and removal becomes BREAKING (given ≥ 0.95 confidence and ≥ 50 new observations).
 - **Ignore rules** with mandatory visibility: suppressed findings are counted in every summary (`2 breaking, 5 warnings (1 suppressed)`) and shown with `--show-suppressed`. Nothing is ever silently dropped.
 
 ## Config reference
@@ -133,6 +134,8 @@ False-positive control is a design goal, not an afterthought:
   "source": ["src/**/*.{ts,js,tsx}"],    // searched by `hookdrift impact`
   "strict": false,                       // warnings fail CI too
   "minSamples": 10,                      // below this, presence findings are INFO
+  "failOnSkipped": false,                // fail if a matched fixture could not be parsed
+  "failOnUncontracted": false,           // fail if an event has no committed contract
   "ignore": [
     {
       "path": "data.object.metadata.**", // wildcards are trailing-only: `*` = exactly one
@@ -144,7 +147,13 @@ False-positive control is a design goal, not an afterthought:
 }
 ```
 
-Commands: `init` · `infer [dir]` (`--rebuild` to allow narrowing) · `check [dir]` (`--strict`, `--json`, `--show-suppressed`) · `impact` (`--strict`) · `explain`.
+Commands: `init` · `infer [dir]` (`--rebuild` to allow narrowing) · `check [dir]` (`--strict`, `--json`, `--show-suppressed`, `--fail-on-skipped`, `--fail-on-uncontracted`) · `impact` (`--strict`) · `explain`.
+
+### Proving what a green run actually checked
+
+An empty findings list is not the same as a complete check. `--json` and `.hookdrift/last-run.json` carry a `coverage` block — files matched, files parsed, files skipped with reasons, events observed, contracts compared, contracts that received no fixtures, and events with no committed contract — so a wrapper can tell "nothing drifted" apart from "nothing was looked at".
+
+Two holes can be made fatal. `--fail-on-skipped` fails the run when a matched fixture could not be parsed (the unreadable file may be the one carrying the breaking shape). `--fail-on-uncontracted` fails it when fixtures contain an event with no committed contract. Both default to off so an upgrade changes nothing until you ask for it; for a gate, turn both on.
 
 ## GitHub Action
 

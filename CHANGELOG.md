@@ -4,8 +4,115 @@ Notable changes per release. Dates are the publish date.
 
 ## 0.1.3 — unreleased
 
-Response to an external production-readiness review. Every item below was
-reproduced against the previous release before it was changed.
+Response to two external production-readiness reviews, the second adversarial
+and aimed at the fixes from the first. Every item below was reproduced before
+it was changed.
+
+### Storage identity is collision-resistant
+
+- **Distinct events can no longer share a contract file.** The 6-character
+  32-bit hash added earlier was collidable by hand rather than by search:
+  `"/̀"` and `"?Đ"` both sanitized to `__` and both hashed to `1pt`,
+  so two unrelated events silently merged into one plausible-looking contract
+  and coverage reported two contracts checked against one file. Names are now
+  disambiguated with 64 bits of SHA-256.
+- **Case-only and reserved names are disambiguated too.** `Event` and `event`
+  shared a file on Windows and macOS; `CON`, `PRN`, `COM1` and friends cannot
+  be created on Windows at all. Only lowercase, filename-safe, non-reserved,
+  bounded names keep their plain form — which is every real Stripe, Shopify and
+  GitHub event, so existing contracts are untouched.
+- **A contract file that holds a different identity than the one requested is
+  refused** rather than merged. Any collision now fails loudly.
+- **Provider and event identities are length-bounded** (200 characters; 64 for
+  a provider). A 300-character event name previously aborted the entire run
+  with a bare filesystem errno.
+- **Every per-event failure in `infer` is isolated**, including errors from the
+  write itself. One bad event no longer costs the inference of all the others.
+
+### Containment is physical, not lexical
+
+- `path.resolve` normalises `..` but does not follow symlinks, so a symlinked
+  provider directory passed the containment check and wrote outside the tree.
+  Real paths are now compared where they exist.
+- `contractsDir` — the one path hookdrift writes to — must stay inside the
+  project. An untrusted pull request could otherwise point it anywhere.
+
+### Contracts cannot be internally contradictory
+
+- Relations are validated, not just field types. A contract declaring
+  `presence: 0` with `containCount: 100` of 100 samples was accepted, and the
+  complete disappearance of that required field then came out as INFO with exit
+  0 — a false green from a file that passed validation. Also rejected: counts
+  above the sample total, enums on non-string fields, empty or duplicated
+  enums, `enumAuthoritative` without an enum, `polymorphic` outside the
+  string/object pair, and unparseable timestamps. Contracts written by earlier
+  releases still load.
+
+### Concurrent runs do not clobber each other
+
+- `check` reports carry a `runId`. `impact` re-reads `last-run.json` before
+  writing its references back and refuses to write when the id has changed —
+  previously a clean check that finished during a scan was silently reverted to
+  the older failing report, timestamp included.
+
+### Privacy
+
+- **Parse errors no longer quote the file.** Node's message for
+  `{"token":sk_live_SECRET123}` embeds the payload; it was stored in
+  `coverage.skipped` and printed. Replaced with a category and, where the
+  parser supplies one, a line/column.
+- **Enum values are length-bounded** (200 characters). Thirty observations of
+  one 200,000-character string were persisted verbatim as a one-value enum.
+- **`infer` warns when the event name itself looks like data** — it is a
+  payload value, and it lands in the contract body and its filename.
+- `SECURITY.md` documents three exceptions rather than two, and says plainly
+  what is and is not bounded when running on untrusted input.
+
+### Output and enforcement
+
+- **Control and bidi characters are stripped from human output.** An event
+  named `e\x1b[31mRED` reached the terminal byte-for-byte; `--json` still
+  carries raw values for machine consumers.
+- **`--version` and `help` reject unknown flags** like every other command.
+- **`contractsChecked` counts comparisons that succeeded**, not attempts. A
+  contract whose diff threw was still reported as checked.
+- The enum-removal message no longer tells you to set `enumAuthoritative` when
+  it is already set; it says which threshold was missed instead.
+
+### GitHub Action
+
+- **`impact` output can no longer break out of its code fence.** It was
+  inserted raw inside a fixed ``` block, so an enum value containing a fence,
+  `</details>`, a heading and a mention injected all three into the comment.
+  The fence is now longer than any backtick run in the content, control bytes
+  are stripped, and the volume is bounded by lines. The optional details block
+  is dropped whole rather than sliced, so truncation cannot cut a fence in half.
+- **`strict` must be exactly `true` or `false`.** `ture` silently meant false —
+  the same fail-open as a mistyped `--strcit`.
+- **The version input is validated against the SemVer 2.0.0 grammar.** The
+  previous pattern accepted `1.2.3-..` and `1.2.3-01` and rejected valid
+  `1.2.3+build.1`.
+- New `fail-on-skipped` and `fail-on-uncontracted` inputs expose the coverage
+  gates to CI.
+
+### Packaging
+
+- `prepack` builds, so a clean checkout packs the CLI. Previously only
+  `prepublishOnly` did, leaving `npm pack` and git installs with a three-file
+  package containing no `dist/`.
+
+### Known limits, unchanged
+
+Ambiguous dotted paths (a literal `a.b` key collides with nested `a.b`), no
+root-type node, no per-enum-value counts, no map/wildcard redaction, and no
+manifest that can require full coverage. These need a versioned contract v2
+with a migration and are not being rushed into a patch release. hookdrift
+remains an advisory tool: use it to surface evidence and focus review, not as
+the sole gate whose green run authorises production.
+
+---
+
+The first review's findings, all still in this release:
 
 ### Enforcement no longer fails open
 
